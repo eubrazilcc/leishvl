@@ -28,17 +28,17 @@
 ###
 # Usage examples:
 #
-# 1) start/stop the LeishVL <microservice>:
+# 1) start/stop the LeishVL microservice:
 #  
-#    leishvl-<microservice> start/stop
+#    jsvc_exec <microservice> start/stop
 #
-# 2) check the status of the service:
+# 2) check the status of the microservice:
 #
-#    leishvl-<microservice> status
+#    jsvc_exec <microservice> status
 #
 # 3) do not execute operation, just print the command:
 #
-#    RUN_JAVA_DRY=1 leishvl-<microservice> start
+#    RUN_JAVA_DRY=1 jsvc_exec <microservice> start
 ###
 
 # stop on errors
@@ -53,15 +53,15 @@ else
   SCRIPT_DIR=$(cd $(dirname $(readlink $0)) && pwd)
 fi
 
-APP_SUFIX=drive
-APP_VERSION=0.3.0
+APP_SUFIX=$1
+APP_VERSION=1.0.0
 
 APP_NAME=leishvl-${APP_SUFIX}
 APP_DIR=$(dirname $SCRIPT_DIR)
 APP_CONFIG=${APP_DIR}/etc
 APP_JARFILE=${APP_DIR}/lib/leishvl-${APP_VERSION}/${APP_NAME}-${APP_VERSION}-uber.jar
 APP_DAEMON_CLASS="io.leishvl.${APP_SUFIX}.AppDaemon"
-APP_WORKING_DIR=${APP_DIR}/var/run/${APP_NAME}/
+APP_WORKING_DIR=${APP_DIR}/var/run/${APP_NAME}
 APP_OUT_FILE=${APP_WORKING_DIR}/${APP_NAME}.out
 APP_ERR_FILE=${APP_WORKING_DIR}/${APP_NAME}.err
 APP_PID_FILE=${APP_WORKING_DIR}/${APP_NAME}.pid
@@ -116,7 +116,7 @@ start_exec()
   RUN_JAVA_DRY=${RUN_JAVA_DRY:=} # Do not execute when is not empty, but just print
 
   RUN_JAVA_OPTS="$RUN_JAVA_OPTS -Dlogback.configurationFile=${APP_CONFIG}/logback.xml"
-  APP_RUN_ARGS="-c ${APP_CONFIG}/application.conf"
+  APP_RUN_ARGS="-c ${APP_CONFIG}/${APP_NAME}.conf"
 
   # display full Java command
   if [ -n "$RUN_JAVA_DRY" ]; then
@@ -157,7 +157,18 @@ status_exec()
   fi
 }
 
-case "$1" in
+usage_print()
+{
+  echo "Usage: $SCRIPT_DIR/$SCRIPT_NAME {service} {start|stop|status}" >&2
+}
+
+if [ "$#" -ne 2 ]; then
+  echo "Error: Illegal number of parameters."
+  usage_print
+  exit 3
+fi
+
+case "$2" in
   start)
         start_exec
         ;;
@@ -168,7 +179,8 @@ case "$1" in
         status_exec
         ;;
   *)
-        echo "Usage: $SCRIPT_DIR/$SCRIPT_NAME {start|stop|status}" >&2
+        echo "Error: Unsupported operation."
+        usage_print
         exit 3
         ;;
 esac

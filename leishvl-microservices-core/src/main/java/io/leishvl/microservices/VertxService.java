@@ -22,6 +22,8 @@
 
 package io.leishvl.microservices;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -31,18 +33,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
 import com.google.common.util.concurrent.AbstractIdleService;
+import com.hazelcast.config.ClasspathXmlConfig;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.NetworkConfig;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 
 /**
  * Vert.x service.
@@ -80,7 +89,24 @@ public class VertxService extends AbstractIdleService {
 			}
 		};
 		final CompletableFuture<Void> future = new CompletableFuture<>();		
-		if (vertxOptions.isClustered()) {			
+		if (vertxOptions.isClustered()) {
+			// configure Hazelcast		
+			final Config hazelcastConfig = new ClasspathXmlConfig("leishvl-cluster.xml");
+			requireNonNull(hazelcastConfig, "Failed to open default cluster configuration.");
+			final NetworkConfig network = hazelcastConfig.getNetworkConfig();
+			network.getJoin().getTcpIpConfig().setMembers(deploymentOptions.getConfig().getJsonArray("cluster.members")
+					.stream()
+					.map(new Function<Object, String>() {
+						@Override
+						public String apply(final Object input) {					
+							return (String)input;
+						}
+					})
+					.filter(member -> member != null)
+					.collect(Collectors.toList()));
+			network.getInterfaces().setInterfaces(newArrayList(vertxOptions.getClusterHost()));			
+			final ClusterManager clusterManager = new HazelcastClusterManager(hazelcastConfig);
+			vertxOptions.setClusterManager(clusterManager);
 			Vertx.clusteredVertx(vertxOptions, res -> {
 				if (res.succeeded()) {
 					vertx = res.result();
