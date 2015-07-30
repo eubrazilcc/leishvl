@@ -332,7 +332,24 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 							</manifestEntries>
 						</archive>
 					</configuration>
-				</plugin>				
+				</plugin>
+				
+				<!-- Build (child projects may override this configuration) -->
+				<plugin>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+					<configuration>
+						<source>${maven.compiler.source}</source>
+						<target>${maven.compiler.target}</target>
+					</configuration>
+				</plugin>
+				
+				<!-- JUnit test (child projects may override this configuration) -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven-surefire-plugin.version}</version>
+				</plugin>
 				
 				<!-- Configure integration tests (child projects may override this configuration) -->
 				<plugin>
@@ -409,6 +426,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		</plugins>
 	</build>
 	
-	<modules></modules>
+	<modules>
+		<module>leishvl-core</module>
+		<module>leishvl-microservices-core</module>
+		<module>leishvl-drive</module>
+		<module>leishvl-collection</module>
+	</modules>
 	
 </project>
