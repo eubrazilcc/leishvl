@@ -50,7 +50,7 @@ public class DriveRestServer extends AbstractVerticle {
 	public void start() throws Exception {
 		final Router router = Router.router(vertx);
 		// set body limit
-		final long maxBodySize = context.config().getLong("http.max-body-size", MAX_BODY_SIZE) * 1000000l;		
+		final long maxBodySize = context.config().getLong("http-server.max-body-size", MAX_BODY_SIZE) * 1000000l;		
 		router.route().handler(BodyHandler.create().setBodyLimit(maxBodySize));
 		// enable CORS
 		router.route().handler(CorsHandler.create("*")
@@ -70,7 +70,7 @@ public class DriveRestServer extends AbstractVerticle {
 		router.put("/rest/v1/datasets/:ns/:id").consumes("application/json").handler(this::handlePutDataset);
 		router.delete("/rest/v1/datasets/:ns/:id").handler(this::handleDeleteDataset);
 		// start HTTP server
-		final int port = context.config().getInteger("http.port", 8080);		
+		final int port = context.config().getInteger("http-server.port", 8080);		
 		vertx.createHttpServer().requestHandler(router::accept).listen(port);
 		LOGGER.trace("New instance created: [id=" + context.deploymentID() + "].");
 	}

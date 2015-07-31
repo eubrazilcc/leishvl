@@ -79,17 +79,16 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<!-- Convenience properties to set library versions -->
 		<ch.qos.logback.version>1.1.3</ch.qos.logback.version>
 		<com.connexience.esc.version>3.1-SNAPSHOT</com.connexience.esc.version>
+		<com.fasterxml.jackson.version>2.5.3</com.fasterxml.jackson.version> <!-- coincides with Vert.x dependency -->
 		<io.leishvl.version>${project.version}</io.leishvl.version>
-		<io.vertx.version>3.0.0</io.vertx.version>
-		<junit.version>4.12</junit.version> <!-- if you change this, then check Hamcrest version -->
+		<io.vertx.version>3.0.0</io.vertx.version> <!-- if you change this, then update Jackson and mongoDB versions -->
+		<junit.version>4.12</junit.version> <!-- if you change this, then update Hamcrest version -->
 		<org.antlr.version>4.5.1</org.antlr.version>
-		<org.apache.avro.version>1.7.7</org.apache.avro.version>
 		<org.apache.httpcomponents.version>4.5</org.apache.httpcomponents.version>
 		<org.hamcrest.version>1.3</org.hamcrest.version> <!-- coincides with JUnit dependency -->
 		<org.openprovenance.prov.version>0.7.0</org.openprovenance.prov.version>
 		<org.slf4j.version>1.7.12</org.slf4j.version>
-		<org.mockito.version>1.10.19</org.mockito.version>
-		<org.mongodb.version>3.0.3</org.mongodb.version>
+		<org.mongodb.version>3.0.2</org.mongodb.version> <!-- coincides with Vert.x dependency -->
 		
 		<!-- Convenience properties to set Maven plugins versions -->		
 		<buildnumber-maven-plugin.version>1.3</buildnumber-maven-plugin.version>
@@ -127,6 +126,14 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<artifactId>api-model</artifactId>
 				<version>${com.connexience.esc.version}</version>
 			</dependency>
+			
+			<!-- Jackson JSON processor -->
+			
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${com.fasterxml.jackson.version}</version>
+			</dependency>
 		
 			<!-- Guava: Google Core Libraries for Java -->
 
@@ -141,12 +148,38 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<version>3.0.0</version>
 			</dependency>
 			
+			<!-- Google Protocol Buffer: a language-neutral, platform-neutral, extensible data serializing framework -->
+			
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>2.6.1</version>
+			</dependency>
+			
 			<!-- Configuration library -->
 			
 			<dependency>
 				<groupId>com.typesafe</groupId>
 				<artifactId>config</artifactId>
 				<version>1.3.0</version>
+			</dependency>
+			
+			<!-- GeoJson POJOs For Jackson -->
+			
+			<dependency>
+				<groupId>de.grundid.opendatalab</groupId>
+				<artifactId>geojson-jackson</artifactId>
+				<version>1.5.1</version>
+				<exclusions>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>jackson-core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>com.fasterxml.jackson.core</groupId>
+						<artifactId>jackson-databind</artifactId>
+					</exclusion>
+				</exclusions>
 			</dependency>
 			
 			<!-- Vert.x open-source event-driven application framework and toolkit that runs on the JVM -->
@@ -183,6 +216,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			</dependency>
 			<dependency>
 				<groupId>io.vertx</groupId>
+				<artifactId>vertx-mongo-client</artifactId>
+				<version>${io.vertx.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>io.vertx</groupId>
 				<artifactId>vertx-unit</artifactId>
 				<version>${io.vertx.version}</version>
 			</dependency>
@@ -198,17 +236,15 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<groupId>org.antlr</groupId>
 				<artifactId>antlr4-runtime</artifactId>
 				<version>${org.antlr.version}</version>
-			</dependency>
-			
-			<!-- Apache Avro: a language-neutral, platform-neutral, extensible data serializing framework -->
-			
-			<dependency>
-				<groupId>org.apache.avro</groupId>
-				<artifactId>avro</artifactId>
-				<version>${avro.version}</version>
-			</dependency>
+			</dependency>			
 		
 			<!-- Apache Commons: Collection of open source reusable Java components -->
+			
+			<dependency> <!-- Wrapper around reflection and introspection -->
+				<groupId>commons-beanutils</groupId>
+				<artifactId>commons-beanutils</artifactId>
+				<version>1.9.2</version>
+			</dependency>
 			
 			<dependency> <!-- Command-line interface utilities -->
 				<groupId>commons-cli</groupId>
@@ -242,11 +278,20 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<version>${org.apache.httpcomponents.version}</version>
 			</dependency>
 			
-			<!-- MongoDB Java driver -->
+			<!-- Apache Tika: a toolkit for detecting and extracting metadata and 
+				structured text content from various documents using existing parser libraries -->
+
+			<dependency> <!-- core -->
+				<groupId>org.apache.tika</groupId>
+				<artifactId>tika-core</artifactId>
+				<version>1.8</version>
+			</dependency>
 			
+			<!-- MongoDB Java driver -->
+						
 			<dependency>
 				<groupId>org.mongodb</groupId>
-				<artifactId>mongodb-driver</artifactId>
+				<artifactId>mongo-java-driver</artifactId>
 				<version>${org.mongodb.version}</version>
 			</dependency>
 			
@@ -295,20 +340,6 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		  <version>${org.hamcrest.version}</version>
 		  <scope>test</scope>
         </dependency>
-
-		<!-- Mockito: a mock objects library for Java -->
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-core</artifactId>
-			<version>${org.mockito.version}</version>
-			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>org.hamcrest</groupId>
-					<artifactId>hamcrest-core</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
 	</dependencies>
 	
 	<build>
@@ -427,10 +458,14 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	</build>
 	
 	<modules>
+		<module>leishvl-test-tools</module>
 		<module>leishvl-core</module>
+		<module>leishvl-storage-core</module>
+		<module>leishvl-storage-core2</module>
 		<module>leishvl-microservices-core</module>
-		<module>leishvl-drive</module>
 		<module>leishvl-collection</module>
+		<module>leishvl-drive</module>
+		<module>leishvl-ui</module>
 	</modules>
 	
 </project>

@@ -100,10 +100,10 @@ public class AppDaemon extends LeishvlDaemon {
 		final VertxOptions vertxOptions = new VertxOptions().setClustered(true)
 				.setClusterHost(config.getString("leishvl.cluster.host"));
 		final Map<String, Object> verticleConfig = newHashMap();
-		verticleConfig.put("http.port", config.getInt("leishvl.http.port"));
+		verticleConfig.put("http-server.port", config.getInt("leishvl.http-server.port"));
 		verticleConfig.put("cluster.members", config.getStringList("leishvl.cluster.members"));
 		final DeploymentOptions deploymentOptions = new DeploymentOptions()				
-				.setInstances(config.getInt("leishvl.http.instances"))
+				.setInstances(config.getInt("leishvl.http-server.instances"))
 				.setConfig(new JsonObject(verticleConfig));
 		serviceManager = new ServiceManager(newHashSet(new VertxService(newArrayList(DriveRestServer.class), vertxOptions, deploymentOptions)));
 

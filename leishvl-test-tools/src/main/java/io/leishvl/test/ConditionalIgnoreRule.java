@@ -1,0 +1,109 @@
+/*
+ * Copyright 2014-2015 EUBrazilCC (EU‐Brazil Cloud Connect)
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ * This product combines work with different licenses. See the "NOTICE" text
+ * file for details on the various modules and licenses.
+ * 
+ * The "NOTICE" text file is part of the distribution. Any derivative works
+ * that you distribute must include a readable copy of the "NOTICE" text file.
+ */
+
+package io.leishvl.test;
+
+import static java.io.File.separator;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.lang.reflect.Modifier;
+
+import org.junit.Assume;
+import org.junit.rules.MethodRule;
+import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.Statement;
+
+/**
+ * A JUnit rule to conditionally ignore tests.
+ * @author Radiger Herrmann - initial API and implementation.
+ * @see <a href="http://www.codeaffine.com/2013/11/18/a-junit-rule-to-conditionally-ignore-tests/">A JUnit Rule to Conditionally Ignore Tests</a>
+ */
+public class ConditionalIgnoreRule implements MethodRule {
+
+	public static final String TEST_CONFIG_ROOT = "test";
+	public static final String TEST_CONFIG_DIR = TEST_CONFIG_ROOT + separator + "tests-enabled";	
+	
+	public interface IgnoreCondition {
+		boolean isSatisfied();
+	}
+
+	@Retention(RetentionPolicy.RUNTIME)
+	@Target({ElementType.METHOD})
+	public @interface ConditionalIgnore {
+		Class<? extends IgnoreCondition> condition();
+	}
+
+	public Statement apply(final Statement base, final FrameworkMethod method, final Object target) {
+		Statement result = base;
+		if (hasConditionalIgnoreAnnotation(method)) {
+			final IgnoreCondition condition = getIgnoreContition(method, target);
+			if (condition.isSatisfied()) {
+				result = new IgnoreStatement(condition);
+			}
+		}
+		return result;
+	}
+
+	private boolean hasConditionalIgnoreAnnotation(final FrameworkMethod method) {
+		return method.getAnnotation(ConditionalIgnore.class) != null;
+	}
+
+	private IgnoreCondition getIgnoreContition(final FrameworkMethod method,final Object instance) {
+		final ConditionalIgnore annotation = method.getAnnotation(ConditionalIgnore.class);
+		return newCondition(annotation, instance);
+	}
+
+	private IgnoreCondition newCondition(final ConditionalIgnore annotation, final Object instance) {
+		final Class<? extends IgnoreCondition> cond = annotation.condition();
+		try {        
+			if (cond.isMemberClass()) {
+				if (Modifier.isStatic(cond.getModifiers())) {
+					return (IgnoreCondition) cond.getDeclaredConstructor(new Class<?>[]{}).newInstance();
+				} else if (instance != null && instance.getClass().isAssignableFrom(cond.getDeclaringClass())) {
+					return (IgnoreCondition) cond.getDeclaredConstructor(new Class<?>[]{instance.getClass()}).newInstance(instance);
+				}
+				throw new IllegalArgumentException("Conditional class: " + cond.getName() + " was an inner member class however it was not declared inside the test case using it. Either make this class a static class (by adding static keyword), standalone class (by declaring it in it's own file) or move it inside the test case using it");
+			} else {
+				return cond.newInstance();
+			}
+		} catch(RuntimeException re) { 
+			throw re;
+		} catch(Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private static class IgnoreStatement extends Statement {
+		private IgnoreCondition condition;
+		IgnoreStatement(final IgnoreCondition condition) {
+			this.condition = condition;
+		}
+		@Override
+		public void evaluate() {
+			Assume.assumeTrue("Ignored by " + condition.getClass().getSimpleName(), false);
+		}
+	}
+
+}

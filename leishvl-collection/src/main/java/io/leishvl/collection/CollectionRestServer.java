@@ -50,7 +50,7 @@ public class CollectionRestServer extends AbstractVerticle {
 	public void start() throws Exception {
 		final Router router = Router.router(vertx);
 		// set body limit
-		final long maxBodySize = context.config().getLong("http.max-body-size", MAX_BODY_SIZE) * 1000000l;		
+		final long maxBodySize = context.config().getLong("http-server.max-body-size", MAX_BODY_SIZE) * 1000000l;		
 		router.route().handler(BodyHandler.create().setBodyLimit(maxBodySize));
 		// enable CORS
 		router.route().handler(CorsHandler.create("*")
