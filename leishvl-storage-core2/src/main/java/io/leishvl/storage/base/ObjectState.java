@@ -20,45 +20,26 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
-
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+package io.leishvl.storage.base;
 
 /**
- * Groups the unit tests for their execution.
+ * Possible object states.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public enum ObjectState {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	DRAFT(100),    //              (create) ->    draft
+	RELEASE(200),  // draft ->   (approval) ->  release
+	OBSOLETE(300); // *any* -> (invalidate) -> obsolete
+	
+	private int intState;
+	
+	private ObjectState(final int intState) {
+		this.intState = intState;
 	}
 
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
+	public int getIntState() {
+		return intState;
 	}
-
+	
 }

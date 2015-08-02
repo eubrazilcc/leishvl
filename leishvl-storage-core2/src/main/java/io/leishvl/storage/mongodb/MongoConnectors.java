@@ -20,45 +20,23 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
+package io.leishvl.storage.mongodb;
 
-import static io.leishvl.core.LogManager.LOG_MANAGER;
+import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
- * Groups the unit tests for their execution.
+ * Provides factory methods to create different classes of mongoDB connectors (clients).
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public class MongoConnectors {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	public static MongoConnector createShared(final Vertx vertx, final JsonObject config) {
+		requireNonNull(vertx, "Vert.x Core API reference expected.");
+		requireNonNull(config, "mongoDB configuration expected.");		
+		return new MongoConnector(vertx, config);
 	}
-
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
-	}
-
+	
 }

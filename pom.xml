@@ -81,14 +81,14 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<com.connexience.esc.version>3.1-SNAPSHOT</com.connexience.esc.version>
 		<com.fasterxml.jackson.version>2.5.3</com.fasterxml.jackson.version> <!-- coincides with Vert.x dependency -->
 		<io.leishvl.version>${project.version}</io.leishvl.version>
-		<io.vertx.version>3.0.0</io.vertx.version> <!-- if you change this, then update Jackson and mongoDB versions -->
+		<io.vertx.version>3.0.0</io.vertx.version> <!-- if you change this, then update Jackson version -->
 		<junit.version>4.12</junit.version> <!-- if you change this, then update Hamcrest version -->
 		<org.antlr.version>4.5.1</org.antlr.version>
 		<org.apache.httpcomponents.version>4.5</org.apache.httpcomponents.version>
 		<org.hamcrest.version>1.3</org.hamcrest.version> <!-- coincides with JUnit dependency -->
 		<org.openprovenance.prov.version>0.7.0</org.openprovenance.prov.version>
 		<org.slf4j.version>1.7.12</org.slf4j.version>
-		<org.mongodb.version>3.0.2</org.mongodb.version> <!-- coincides with Vert.x dependency -->
+		<org.mongodb.version>3.0.3</org.mongodb.version>
 		
 		<!-- Convenience properties to set Maven plugins versions -->		
 		<buildnumber-maven-plugin.version>1.3</buildnumber-maven-plugin.version>
@@ -104,8 +104,10 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<maven-shade-plugin.version>2.4.1</maven-shade-plugin.version>
 		<maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
 		<embedmongo-maven-plugin.version>0.1.12</embedmongo-maven-plugin.version>
-		<embedmongo-maven-plugin.mongodb.version>3.0.4</embedmongo-maven-plugin.mongodb.version>
+		<embedmongo-maven-plugin.mongodb.version>3.0.5</embedmongo-maven-plugin.mongodb.version>
 		<embedmongo-maven-plugin.download.path>https://fastdl.mongodb.org/</embedmongo-maven-plugin.download.path>
+		<maven-mongodb-plugin.version>1.1.1</maven-mongodb-plugin.version>
+		<maven-mongodb-plugin.mongodb.version>3.0.5</maven-mongodb-plugin.mongodb.version>
 	</properties>
 	
 	<dependencyManagement>
@@ -213,12 +215,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<groupId>io.vertx</groupId>
 				<artifactId>vertx-hazelcast</artifactId>
 				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-mongo-client</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
+			</dependency>			
 			<dependency>
 				<groupId>io.vertx</groupId>
 				<artifactId>vertx-unit</artifactId>
@@ -288,8 +285,13 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			</dependency>
 			
 			<!-- MongoDB Java driver -->
-						
+
 			<dependency>
+				<groupId>org.mongodb</groupId>
+				<artifactId>mongodb-driver-async</artifactId>
+				<version>${org.mongodb.version}</version>
+			</dependency>			
+			<dependency> <!-- legacy driver, needed to support GridFS -->
 				<groupId>org.mongodb</groupId>
 				<artifactId>mongo-java-driver</artifactId>
 				<version>${org.mongodb.version}</version>
@@ -401,6 +403,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					<groupId>com.github.joelittlejohn.embedmongo</groupId>
 					<artifactId>embedmongo-maven-plugin</artifactId>
 					<version>${embedmongo-maven-plugin.version}</version>
+				</plugin>
+				<plugin> <!-- MongoDB database -->
+					<groupId>com.syncleus.maven.plugins</groupId>
+					<artifactId>maven-mongodb-plugin</artifactId>
+					<version>${maven-mongodb-plugin.version}</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>

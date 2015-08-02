@@ -20,45 +20,25 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
+package io.leishvl.storage.base;
 
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 /**
- * Groups the unit tests for their execution.
+ * Operates on all elements of a collection, no matter their state.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public class AllCollectionOperator<T extends LeishvlObject> extends CollectionOperatorImpl<T> {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	public AllCollectionOperator(final LeishvlCollection<T> leishvlCol) {
+		super(leishvlCol, null);
 	}
 
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
+	@Override
+	public String toString() {
+		return toStringHelper(this)
+				.add(CollectionOperator.class.getSimpleName(), super.toString())				
+				.toString();
 	}
 
 }

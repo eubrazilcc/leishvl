@@ -34,12 +34,22 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<artifactId>leishvl-test-tools</artifactId>
 	<name>leishvl-test-tools</name>
 	<description>Collection of utilities to simplify the testing of LeishVL components</description>
+	<url>http://eubrazilcc.github.io/leishvl/</url>
 	
 	<dependencies>
 		<!-- Jackson JSON processor -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- JUnit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 	
@@ -47,8 +57,8 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<plugins>
 			<!-- Build -->
 			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-			</plugin>
+				<artifactId>maven-compiler-plugin</artifactId>				
+			</plugin>			
 		</plugins>
 	</build>
 </project>

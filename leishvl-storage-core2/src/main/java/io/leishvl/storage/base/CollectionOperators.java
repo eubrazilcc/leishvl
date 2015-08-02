@@ -20,45 +20,20 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
-
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+package io.leishvl.storage.base;
 
 /**
- * Groups the unit tests for their execution.
+ * Facilitates common operations with collection operators, like creating new instances.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public final class CollectionOperators {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	public static <T extends LeishvlObject> AllCollectionOperator<T> allOperator(final LeishvlCollection<T> leishvlCol) {
+		return new AllCollectionOperator<>(leishvlCol);
 	}
 
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
+	public static <T extends LeishvlObject> ReleasesCollectionOperator<T> releasesOperator(final LeishvlCollection<T> leishvlCol) {
+		return new ReleasesCollectionOperator<>(leishvlCol);
 	}
 
 }

@@ -20,45 +20,40 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
-
-import static io.leishvl.core.LogManager.LOG_MANAGER;
+package io.leishvl.storage.mongodb.jackson;
 
 import java.io.IOException;
+import java.util.Date;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
 /**
- * Groups the unit tests for their execution.
+ * Deserialize mongoDB dates from JSON to {@link Date} Java class.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public final class MongoDateDeserializer extends StdDeserializer<Date> {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	private static final long serialVersionUID = -8033657526192304797L;
+
+	public MongoDateDeserializer() {
+		super(Date.class);
 	}
 
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
+	@Override
+	public Date deserialize(final JsonParser parser, final DeserializationContext context) throws IOException, JsonProcessingException {
+		Date date = null;
+		parser.nextToken();
+		while (parser.nextToken() != JsonToken.END_OBJECT) {
+			final String fieldname = parser.getCurrentName();			
+			if ("$date".equals(fieldname)) {				
+				date = new Date(parser.getLongValue());
+			}
+		}
+		return date;
 	}
 
 }

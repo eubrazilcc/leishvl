@@ -22,63 +22,43 @@
 
 package io.leishvl.storage;
 
-import static io.leishvl.core.conf.LogManager.LOG_MANAGER;
-import static io.leishvl.storage.mock.CloserServiceMock.CLOSER_SERVICE_MOCK;
-import static org.apache.commons.io.FilenameUtils.concat;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
+import static io.leishvl.core.LogManager.LOG_MANAGER;
+
+import java.io.IOException;
+
+import io.leishvl.test.suite.LeishvlTestSuite;
+
 /**
  * Groups the integration tests for their execution.
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(Suite.class)
-@SuiteClasses({ })
+@SuiteClasses({ DummyTest.class })
 public class AllIntegrationTests {
-
-	public static final String ANCHOR_FILENAME = "m2anchor";
 
 	@BeforeClass
 	public static void setup() {
 		System.out.println("AllIntegrationTests.setup()");
-		final URL anchorURL = AllIntegrationTests.class.getClassLoader().getResource(ANCHOR_FILENAME);
-		File anchorFile = null;
-		try {
-			anchorFile = new File(anchorURL.toURI());
-		} catch (Exception e) {
-			anchorFile = new File(System.getProperty("user.dir"));
-		}
-		TEST_RESOURCES_PATH = concat(anchorFile.getParent(), "files");
-		final File resDir = new File(TEST_RESOURCES_PATH);
-		if (resDir != null && resDir.isDirectory() && resDir.canRead()) {
-			try {
-				TEST_RESOURCES_PATH = resDir.getCanonicalPath();
-			} catch (IOException e) {
-				// nothing to do
-			}
-		} else {
-			throw new IllegalStateException("Invalid test resources pathname: " + TEST_RESOURCES_PATH);
-		}
-		System.out.println("Test resources pathname: " + TEST_RESOURCES_PATH);
+		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
+		testSuite.getTestResourcePath();
 		// load logging bridges
-		LOG_MANAGER.preload();
+		LOG_MANAGER.init();
 		// system pre-loading
-		CLOSER_SERVICE_MOCK.preload();
+		// nothing to do
 	}
 
 	@AfterClass
 	public static void release() {
-		CLOSER_SERVICE_MOCK.close();
+		// release resources
+		try {
+			LOG_MANAGER.close();
+		} catch (IOException ignore) { }
 	}
-
-	public static String TEST_RESOURCES_PATH;
 
 }

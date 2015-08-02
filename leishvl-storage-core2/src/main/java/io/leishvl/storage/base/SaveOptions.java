@@ -20,45 +20,16 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
-
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+package io.leishvl.storage.base;
 
 /**
- * Groups the unit tests for their execution.
+ * Saving options. By default, the LeishVL will override any existing records of the type {@link ObjectState#DRAFT} with the new 
+ * provided values. On the contrary, new versions will be inserted for the objects of the type type {@link ObjectState#RELEASE}. 
+ * Obsolete records cannot be updated.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public enum SaveOptions {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
-	}
-
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
-	}
+	SAVE_OVERRIDING
 
 }

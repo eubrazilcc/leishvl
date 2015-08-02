@@ -20,45 +20,29 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
+package io.leishvl.storage.prov;
 
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
-
-import io.leishvl.test.suite.LeishvlTestSuite;
+import org.openprovenance.prov.interop.InteropFramework;
+import org.openprovenance.prov.model.Document;
 
 /**
- * Groups the unit tests for their execution.
+ * Exports provenance to several file formats.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(Suite.class)
-@SuiteClasses({ })
-public class AllJUnitTests {
+public final class ProvWriter {
 
-	@BeforeClass
-	public static void setup() {
-		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
-		// load logging bridges
-		LOG_MANAGER.init();
-		// system pre-loading
-		// nothing to do
+	/**
+	 * Exports the specified document to a file. The file format is discovered from the file extension. <strong>Note </strong> that 
+	 * Graphviz is needed locally to export to PROVN and SVG formats.
+	 * @param document - provenance document to be exported
+	 * @param file - output file
+	 * @see <a href="http://www.graphviz.org/">Graphviz</a>
+	 */
+	public static void provToFile(final Document document, final String file) {
+		final InteropFramework intF = new InteropFramework();
+		intF.writeDocument(file, document);     
+		// intF.writeDocument(System.out, ProvFormat.JSON, document);
+		// intF.writeDocument(System.out, ProvFormat.PROVN, document);
 	}
-
-	@AfterClass
-	public static void release() {
-		// release resources
-		try {
-			LOG_MANAGER.close();
-		} catch (IOException ignore) { }
-	}
-
+	
 }
