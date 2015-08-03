@@ -56,7 +56,7 @@ import org.openprovenance.prov.model.WasInformedBy;
 
 import com.google.common.collect.Lists;
 
-import io.leishvl.core.xml.ncbi.taxonomy.Citation;
+import io.leishvl.storage.Citation;
 import io.leishvl.storage.security.User;
 
 /**

@@ -34,7 +34,7 @@ import static io.leishvl.storage.base.LeishvlObject.LEISHVL_NAMESPACE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_SPARSE_IS_ACTIVE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_STATE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_VERSION_FIELD;
-import static io.leishvl.storage.base.StorageDefaults.TIMEOUT;
+import static io.leishvl.storage.base.StorageDefaults.STO_OPERATION_TIMEOUT_SECS;
 import static java.lang.Math.pow;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -44,6 +44,10 @@ import static org.slf4j.LoggerFactory.getLogger;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -52,6 +56,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.UnsignedLong;
 import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
+
+import io.vertx.core.Vertx;
 
 /**
  * Applies configuration to collections.
@@ -90,14 +96,21 @@ public class MongoCollectionConfigurer {
 		this.preload = preload;
 	}
 
-	public void prepareCollection() {
+	public void prepareCollection(final Vertx vertx) {
 		final boolean shouldRun = isConfigured.compareAndSet(false, true);
-		if (shouldRun) {			
+		if (shouldRun) {
+			vertx.executeBlocking(future -> {
+				// TODO
+			}, res -> {
+				// TODO
+			});
+
+			/* TODO
 			// create indexes
 			if (indexes != null && !indexes.isEmpty()) {
 				final ListenableFuture<List<String>> future = MONGODB_CONN.client().createIndexes(collection, indexes);
 				try {
-					future.get(TIMEOUT, SECONDS);
+					future.get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
 					LOGGER.info("Collection configured: " + collection);
 				} catch (Exception e) {
 					LOGGER.info("Failed to configure collection: " + collection, e);
@@ -107,12 +120,12 @@ public class MongoCollectionConfigurer {
 			if (preload != null) {
 				final ListenableFuture<?> future = TASK_RUNNER.submit(preload);
 				try {					
-					future.get(TIMEOUT, SECONDS);
+					future.get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
 					LOGGER.info("Preload operation executed: " + collection);
 				} catch (Exception e) {
 					LOGGER.info("Failed to execute preload operations: " + collection, e);
 				}
-			}
+			} */
 		}
 	}
 
@@ -135,7 +148,7 @@ public class MongoCollectionConfigurer {
 	 * @param descending - sort the elements of the index in descending order
 	 */
 	public static IndexModel indexModel(final String field, final boolean descending) {
-		checkArgument(isNotBlank(field), "Uninitialized or invalid field");
+		checkArgument(isNotBlank(field), "Uninitialized or invalid field.");
 		return indexModel(ImmutableList.of(field), true, descending);
 	}
 
@@ -172,13 +185,13 @@ public class MongoCollectionConfigurer {
 	 * @param descending - sort the elements of the index in descending order
 	 */
 	public static IndexModel indexModel(final List<String> fields, final boolean unique, final boolean descending) {
-		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields");
-		return new IndexModel(new Document(toMap(fields, new Function<String, Object>() {
+		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields.");		
+		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), new Function<String, Object>() {
 			@Override
 			public Object apply(final String field) {
 				return (Integer)(descending ? -1 : 1);
-			}				
-		})), new IndexOptions().unique(unique).background(true));
+			}
+		}))), new IndexOptions().unique(unique).background(true));
 	}
 
 	/**
@@ -186,7 +199,7 @@ public class MongoCollectionConfigurer {
 	 * @param field - field that is used to index the elements
 	 */
 	public static IndexModel geospatialIndexModel(final String field) {
-		checkArgument(isNotBlank(field), "Uninitialized or invalid field");
+		checkArgument(isNotBlank(field), "Uninitialized or invalid field.");
 		return new IndexModel(new Document(field, "2dsphere"), new IndexOptions().background(true));
 	}
 
@@ -196,14 +209,14 @@ public class MongoCollectionConfigurer {
 	 * @param prefix - prefix for the index name
 	 */
 	public static IndexModel textIndexModel(final List<String> fields, final String prefix) {
-		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields");
-		checkArgument(isNotBlank(prefix), "Uninitialized or invalid prefix");
-		return new IndexModel(new Document(toMap(fields, new Function<String, Object>() {
+		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields.");
+		checkArgument(isNotBlank(prefix), "Uninitialized or invalid prefix.");		
+		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), new Function<String, Object>() {
 			@Override
 			public Object apply(final String field) {
 				return "text";
 			}
-		})), new IndexOptions().background(true).languageOverride("english").name(prefix + ".text_idx"));
+		}))), new IndexOptions().background(true).languageOverride("english").name(prefix + ".text_idx"));		
 	}
 
 	/**
@@ -214,7 +227,7 @@ public class MongoCollectionConfigurer {
 	 * @see <a href="http://docs.mongodb.org/manual/core/index-sparse/">MongoDB: Sparse Indexes</a>
 	 */
 	public static IndexModel sparseIndexModel(final String field, final boolean descending) {
-		checkArgument(isNotBlank(field), "Uninitialized or invalid field");
+		checkArgument(isNotBlank(field), "Uninitialized or invalid field.");
 		return new IndexModel(new Document(field, descending ? -1 : 1), new IndexOptions().background(true).sparse(true));				
 	}
 
@@ -226,7 +239,7 @@ public class MongoCollectionConfigurer {
 	 * @see <a href="http://docs.mongodb.org/manual/core/index-sparse/">MongoDB: Sparse Indexes</a>
 	 */
 	public static IndexModel sparseIndexModelWithUniqueConstraint(final String field, final boolean descending) {
-		checkArgument(isNotBlank(field), "Uninitialized or invalid field");
+		checkArgument(isNotBlank(field), "Uninitialized or invalid field.");
 		return new IndexModel(new Document(field, descending ? -1 : 1), new IndexOptions().background(true).sparse(true).unique(true));
 	}
 
@@ -238,8 +251,8 @@ public class MongoCollectionConfigurer {
 	 * @see <a href="http://stats.stackexchange.com/a/70884">How to uniformly project a hash to a fixed number of buckets</a>
 	 */
 	public static int hash2bucket(final String e, final int buckets) {
-		checkArgument(isNotBlank(e), "Uninitialized or invalid string");
-		checkArgument(buckets > 0l, "Invalid number of buckets");
+		checkArgument(isNotBlank(e), "Uninitialized or invalid string.");
+		checkArgument(buckets > 0l, "Invalid number of buckets.");
 		// compute 32-bit hash using MurmurHash3 function
 		final int hash = murmur3_32(1301081).newHasher().putBytes(e.getBytes()).hash().asInt();
 		// convert computed hash to unsigned integer and cast to double

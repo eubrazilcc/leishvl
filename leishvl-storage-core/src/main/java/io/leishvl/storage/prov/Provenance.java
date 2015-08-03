@@ -24,7 +24,7 @@ package io.leishvl.storage.prov;
 
 import static io.leishvl.core.DataSource.LEISHVL;
 import static io.leishvl.core.DataSource.LEISHVL_SHORT;
-import static io.leishvl.core.util.GeoJsonUtils.toHumanString;
+import static io.leishvl.core.util.GeoJsons.lngLatAlt2Human;
 import static java.util.Arrays.asList;
 import static org.openprovenance.prov.interop.InteropFramework.newXMLProvFactory;
 
@@ -148,7 +148,7 @@ public enum Provenance {
 	}
 
 	public Attribute locationAttr(final @Nullable Point point) {
-		final String coord = (point != null && point.getCoordinates() != null) ? toHumanString(point.getCoordinates()) : "";
+		final String coord = (point != null && point.getCoordinates() != null) ? lngLatAlt2Human(point.getCoordinates()) : "";
 		return (Attribute) PROVENANCE.factory().newOther(PROVENANCE.qn("location"), coord, PROVENANCE.factory().getName().XSD_STRING);
 	}
 

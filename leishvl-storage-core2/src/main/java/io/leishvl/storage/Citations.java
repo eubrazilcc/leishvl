@@ -20,18 +20,40 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.core.util;
+package io.leishvl.storage;
 
-import org.geojson.LngLatAlt;
+import static com.google.common.collect.Maps.newHashMap;
+import static org.slf4j.LoggerFactory.getLogger;
+
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.leishvl.storage.base.LeishvlCollection;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
- * Utilities to work with GeoJSON objects.
+ * Wraps a collection of {@link Citation}.
  * @author Erik Torres <ertorser@upv.es>
  */
-public final class GeoJsonUtils {
+public class Citations extends LeishvlCollection<Citation> {
 
-	public static String toHumanString(final LngLatAlt lngLatAlt) {
-		return lngLatAlt.getLatitude() + "\u00b0" + " N " + lngLatAlt.getLongitude() + "\u00b0" + " W";
+	@JsonProperty("links")
+	private Map<String, Link> links; // HATEOAS links
+
+	public Citations(final Vertx vertx, final JsonObject config) {
+		super(vertx, config, Citation.COLLECTION, Citation.class, Citation.CONFIGURER, getLogger(Citations.class));
+	}
+
+	@Override	
+	public Map<String, Link> getLinks() {
+		return links;
+	}
+
+	@Override
+	public void setLinks(final Map<String, Link> links) {
+		this.links = (links != null ? newHashMap(links) : null);		
 	}
 
 }
