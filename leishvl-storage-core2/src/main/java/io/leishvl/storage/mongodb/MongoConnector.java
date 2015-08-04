@@ -43,6 +43,8 @@ import static com.mongodb.client.model.ReturnDocument.AFTER;
 import static com.mongodb.client.model.Sorts.ascending;
 import static com.mongodb.client.model.Sorts.descending;
 import static com.mongodb.client.model.Sorts.orderBy;
+import static io.leishvl.core.util.GeoJsons.featureBuilder;
+import static io.leishvl.core.util.GeoJsons.featureCollectionWGS84;
 import static io.leishvl.storage.Filters.LogicalType.LOGICAL_AND;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_DENSE_IS_ACTIVE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_ID_FIELD;
@@ -56,25 +58,21 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static java.util.Optional.ofNullable;
+import static java.util.concurrent.CompletableFuture.allOf;
+import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.apache.commons.beanutils.PropertyUtils.getSimpleProperty;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import static io.leishvl.storage.base.StorageDefaults.STO_OPERATION_TIMEOUT_SECS;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import static java.util.concurrent.TimeUnit.SECONDS;
-
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -91,8 +89,6 @@ import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
-import org.geojson.Crs;
-import org.geojson.Feature;
 import org.geojson.FeatureCollection;
 import org.geojson.Polygon;
 import org.slf4j.Logger;
@@ -119,11 +115,7 @@ import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.result.DeleteResult;
-import com.mongodb.client.result.UpdateResult;
 
-import static io.leishvl.core.util.GeoJsons.featureBuilder;
-import static io.leishvl.core.util.GeoJsons.featureCollectionWGS84;
 import io.leishvl.storage.Filter;
 import io.leishvl.storage.Filters;
 import io.leishvl.storage.LeishvlObjectNotFoundException;
@@ -152,7 +144,7 @@ public class MongoConnector {
 	private static final String DS_LOCAL_MAP_NAME = "__vertx.LeishVL.MongoConnector.datasources";
 
 	private final Vertx vertx;
-	private final MongoClient mongo;
+	protected final MongoClient mongo;
 	private final MongoHolder holder;
 
 	public MongoConnector(final Vertx vertx, final JsonObject config) {
@@ -192,8 +184,8 @@ public class MongoConnector {
 	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param allowedTransitions - transitions between states
 	 */
-	public <T extends LeishvlObject> void saveActive(final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {		
-		save(null, obj, resultHandler, allowedTransitions);
+	public <T extends LeishvlObject> void saveActive(final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
+		save(null, obj, wrapCallback2(resultHandler), allowedTransitions);
 	}
 
 	/**
@@ -206,36 +198,31 @@ public class MongoConnector {
 	 */
 	public <T extends LeishvlObject> void saveAsVersion(final String version, final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
 		checkArgument(isNotBlank(version), "New object version cannot be empty");
-		// insert the object in the collection as a new version
-		final ListenableFuture<Void> insertFuture = save(version, obj, allowedTransitions);
+		// insert the object in the collection as a new version		
+		final CompletableFuture<Void> insertFuture = new CompletableFuture<>();
+		save(version, obj, insertFuture, allowedTransitions);
 		// set the new active version to the latest modified record
-		final ListenableFuture<Document> setActiveFuture = transform(insertFuture, new AsyncFunction<Void, Document>() {
-			@Override
-			public ListenableFuture<Document> apply(final Void insertResult) throws Exception {				
-				return activateLastModified(getCollection(obj), obj.getLeishvlId());
-			}			
-		}, TASK_RUNNER.executor());
-		// create response
-		final SettableFuture<Void> future = SettableFuture.create();
-		addCallback(setActiveFuture, new FutureCallback<Document>() {
-			@Override
-			public void onSuccess(final Document result) {
-				if (result != null) {
-					final String activeVersion = result.getString(LEISHVL_VERSION_FIELD);
-					final String thisVersion = obj.getVersion();
-					if (!thisVersion.equals(activeVersion)) {
-						LOGGER.info("The later modification '" + activeVersion + "' is the new active version instead of this '" + thisVersion 
-								+ "' [collection= " + obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "]");
-					}
-					future.set(null);
-				} else future.setException(new LeishvlObjectWriteException("No record was selected as the new active version"));
-			}
-			@Override
-			public void onFailure(final Throwable t) {
-				future.setException(t);
-			}
+		insertFuture.whenCompleteAsync((inserResult, error) -> {
+			final CompletableFuture<Document> activeFuture = convertCallback2(resultHandler, (document) -> {				
+				return null;
+			});
+			if (error == null) {
+				activateLastModified(getCollection(obj), obj.getLeishvlId(), activeFuture);
+				activeFuture.whenCompleteAsync((activeDoc, error2) -> {
+					if (error2 == null) {
+						if (activeDoc != null) {
+							final String activeVersion = activeDoc.getString(LEISHVL_VERSION_FIELD);
+							final String thisVersion = obj.getVersion();
+							if (!thisVersion.equals(activeVersion)) {
+								LOGGER.info("The later modification '" + activeVersion + "' is the new active version instead of this '" + thisVersion 
+										+ "' [collection= " + obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "].");
+							}
+							activeFuture.complete(activeDoc);
+						} else activeFuture.completeExceptionally(new LeishvlObjectWriteException("No record was selected as the new active version."));
+					} else activeFuture.completeExceptionally(error2);
+				});
+			} else activeFuture.completeExceptionally(error);
 		});
-		return future;
 	}
 
 	/**
@@ -246,11 +233,11 @@ public class MongoConnector {
 	 * {@link #matchActive(LeishvlObject)} is preferred which includes a search on the alternative index.</p>
 	 * @param version - set to a value different to <tt>null</tt> to override the active version of the object
 	 * @param obj - object to save
-	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
+	 * @param future - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param allowedTransitions - transitions between states
 	 */
-	private <T extends LeishvlObject> void save(final @Nullable String version, final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
-		final SettableFuture<Void> future = SettableFuture.create();
+	private <T extends LeishvlObject> void save(final @Nullable String version, final T obj, final CompletableFuture<Void> future, final String... allowedTransitions) {
+		requireNonNull(future, "Future expected.");
 		final MongoCollection<Document> dbcol = getCollection(obj);
 		final String version2 = trimToNull(version);
 		final boolean overrideActive = (version2 == null);
@@ -265,57 +252,44 @@ public class MongoConnector {
 				.returnDocument(AFTER)
 				.upsert(true);
 		// execute the operation in the database
-		dbcol.findOneAndUpdate(filter, update, options, new SingleResultCallback<Document>() {
-			@Override
-			public void onResult(final Document result, final Throwable t) {
-				if (t == null) {
-					if (result != null) {
-						obj.setDbId(result.get("_id", ObjectId.class).toHexString());
-						obj.setVersion(result.getString(LEISHVL_VERSION_FIELD));
-						obj.setLastModified(result.getDate(LEISHVL_LAST_MODIFIED_FIELD));
-						future.set(null);
-					} else future.setException(new LeishvlObjectWriteException("No new records were inserted, no existing records were modified by the operation"));					
-				} else if (t instanceof MongoException && ((MongoException)t).getMessage().matches("(?i:.*Cannot update \\'version\\'.*)")) {
-					future.setException(new UnsupportedOperationException("Cannot make a transition between invalid states", t));
-				} else future.setException(t);
-			}
+		dbcol.findOneAndUpdate(filter, update, options, (result, error) -> {			
+			if (error == null) {
+				if (result != null) {
+					obj.setDbId(result.get("_id", ObjectId.class).toHexString());
+					obj.setVersion(result.getString(LEISHVL_VERSION_FIELD));
+					obj.setLastModified(result.getDate(LEISHVL_LAST_MODIFIED_FIELD));
+					future.complete(null);
+				} else future.completeExceptionally(new LeishvlObjectWriteException("No new records were inserted, no existing records were modified by the operation."));					
+			} else if (error instanceof MongoException && ((MongoException)error).getMessage().matches("(?i:.*Cannot update \\'version\\'.*)")) {
+				future.completeExceptionally(new UnsupportedOperationException("Cannot make a transition between invalid states.", error));
+			} else future.completeExceptionally(error);
 		});
-		return future;
 	}
 
-	private <T extends LeishvlObject> void activateLastModified(final MongoCollection<Document> dbcol, final String lvlId, final Handler<AsyncResult<Document>> resultHandler) {
+	private <T extends LeishvlObject> void activateLastModified(final MongoCollection<Document> dbcol, final String lvlId, final CompletableFuture<Document> future) {
 		// found and deactivate all versions of the specified object in the database
-		final SettableFuture<Void> deactivateFuture = SettableFuture.create();
+		final CompletableFuture<Void> deactivateFuture = new CompletableFuture<>();
 		final BsonDocument update = new BsonDocument("$unset", new BsonDocument(newArrayList(
 				new BsonElement(LEISHVL_SPARSE_IS_ACTIVE_FIELD, new BsonString("")), 
 				new BsonElement(LEISHVL_DENSE_IS_ACTIVE_FIELD, new BsonString("")))));
 		final UpdateOptions options = new UpdateOptions().upsert(false);
-		dbcol.updateMany(matchGuid(lvlId), update, options, new SingleResultCallback<UpdateResult>() {
-			@Override
-			public void onResult(final UpdateResult result, final Throwable t) {
-				if (t == null) deactivateFuture.set(null); else deactivateFuture.setException(t);
-			}
+		dbcol.updateMany(matchGuid(lvlId), update, options, (result, error) -> {
+			if (error == null) deactivateFuture.complete(null); else deactivateFuture.completeExceptionally(error);
 		});
 		// set the new active version
-		return transform(deactivateFuture, new AsyncFunction<Void, Document>() {
-			@Override
-			public ListenableFuture<Document> apply(final Void deactivateResult) throws Exception {				
-				final SettableFuture<Document> future = SettableFuture.create();
-				final BsonDocument update = new BsonDocument("$set", new BsonDocument(newArrayList(
+		deactivateFuture.whenCompleteAsync((result, error) -> {
+			if (error == null) {
+				final BsonDocument update2 = new BsonDocument("$set", new BsonDocument(newArrayList(
 						new BsonElement(LEISHVL_SPARSE_IS_ACTIVE_FIELD, new BsonString(lvlId)),
 						new BsonElement(LEISHVL_DENSE_IS_ACTIVE_FIELD, new BsonString(lvlId)))));
 				final FindOneAndUpdateOptions options2 = new FindOneAndUpdateOptions().sort(orderBy(descending(LEISHVL_LAST_MODIFIED_FIELD)))
 						.returnDocument(AFTER)
 						.upsert(false);
-				dbcol.findOneAndUpdate(matchGuid(lvlId), update, options2, new SingleResultCallback<Document>() {
-					@Override
-					public void onResult(final Document result, final Throwable t) {
-						if (t == null) future.set(result); else future.setException(t);
-					}
+				dbcol.findOneAndUpdate(matchGuid(lvlId), update2, options2, (document, error2) -> {
+					if (error2 == null) future.complete(document); else future.completeExceptionally(error2);
 				});
-				return future;
-			}
-		}, TASK_RUNNER.executor());		
+			} else future.completeExceptionally(error);
+		});
 	}
 
 	/**
@@ -409,20 +383,13 @@ public class MongoConnector {
 		final List<T> page = newArrayList();
 		final MutableLong __totalCount = new MutableLong(0l);
 		// get total number of records
-		final SettableFuture<Void> countFuture = SettableFuture.create();		
-		addCallback(totalCount(dbcol, true, excludedStates), new FutureCallback<Long>() {
-			@Override
-			public void onSuccess(final Long result) {
-				__totalCount.setValue(result);
-				countFuture.set(null);
-			}
-			@Override
-			public void onFailure(final Throwable t) {
-				countFuture.setException(t);
-			}			
+		final CompletableFuture<Long> countFuture = new CompletableFuture<>();
+		totalCount(dbcol, true, excludedStates, countFuture);
+		countFuture.thenAcceptAsync((countResult) -> {
+			__totalCount.setValue(countResult);
 		});
 		// find records and populate the page
-		final SettableFuture<Void> findFuture = SettableFuture.create();
+		final CompletableFuture<Void> findFuture = new CompletableFuture<>();
 		final FindIterable<Document> iterable = dbcol
 				.find(and(filterList))
 				.modifiers(!isText ? new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT) : new BsonDocument())
@@ -430,38 +397,25 @@ public class MongoConnector {
 				.sort(orderBy(sortFields))
 				.skip(start)
 				.limit(size);
-		iterable.forEach(new Block<Document>() {
-			@Override
-			public void apply(final Document doc) {
-				try {					
-					page.add(parseDocument(doc, type));
-				} catch (Exception e) {
-					LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
-							+ doc.get("_id", ObjectId.class).toHexString() + "']", e);
-				}
+		iterable.forEach((doc) -> {
+			try {					
+				page.add(parseDocument(doc, type));
+			} catch (Exception e) {
+				LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
+						+ doc.get("_id", ObjectId.class).toHexString() + "']", e);
 			}
-		}, new SingleResultCallback<Void>() {
-			@Override
-			public void onResult(final Void result, final Throwable t) {
-				if (t == null) findFuture.set(null); else findFuture.setException(t);
-			}
+		}, (result, error) -> {
+			if (error == null) findFuture.complete(null); else findFuture.completeExceptionally(error);
 		});
-		// combine the results, failing immediately if any of the futures fails
-		final SettableFuture<List<T>> future = SettableFuture.create();
-		@SuppressWarnings("unchecked")
-		final ListenableFuture<List<Void>> concatenated = allAsList(countFuture, findFuture);
-		addCallback(concatenated, new FutureCallback<List<Void>>() {
-			@Override
-			public void onSuccess(final List<Void> result) {
-				if (totalCount != null) totalCount.setValue(__totalCount.getValue());
-				future.set(page);
-			}
-			@Override
-			public void onFailure(final Throwable t) {
-				future.setException(t);
-			}			
+		// combine the results
+		allOf(countFuture, findFuture).whenCompleteAsync((result, error) -> {
+			vertx.runOnContext(v -> {
+				if (error == null) {
+					if (totalCount != null) totalCount.setValue(__totalCount.getValue());
+					succeededFuture(page);
+				} else failedFuture(error);				
+			});
 		});
-		return future;
 	}
 
 	public <T extends LeishvlObject> void findVersions(final LeishvlObject obj, final Class<T> type, final Handler<AsyncResult<List<LeishvlObject>>> resultHandler) {
@@ -489,68 +443,50 @@ public class MongoConnector {
 	}
 
 	public <T extends LeishvlObject> void delete(final T obj, final boolean includeVersions, final boolean deleteReferences, final Handler<AsyncResult<Boolean>> resultHandler) {
-		checkArgument(obj != null, "Uninitialized or invalid object");
-		checkArgument(isNotBlank(obj.getLeishvlId()), "Uninitialized or invalid primary key value");		
-		final SettableFuture<Boolean> deleteFuture = SettableFuture.create();
-		final MongoCollection<Document> dbcol = getCollection(obj);		
+		checkArgument(obj != null, "Uninitialized or invalid object.");
+		checkArgument(isNotBlank(obj.getLeishvlId()), "Uninitialized or invalid primary key value.");
+		final MongoCollection<Document> dbcol = getCollection(obj);
 		// find and delete records from the database
+		final CompletableFuture<Boolean> deleteFuture = new CompletableFuture<>();
 		final Bson filter = (includeVersions ? matchGuid(obj) : matchActive2(obj));
-		dbcol.deleteMany(filter, new SingleResultCallback<DeleteResult>() {
-			@Override
-			public void onResult(final DeleteResult result, final Throwable t) {
-				if (t == null) {
-					if (result.getDeletedCount() < 1l) {
-						deleteFuture.set(false);
-					} else if (result.getDeletedCount() == 1l || includeVersions) {
-						// cascade delete											
-						if (deleteReferences) {
-							class DeleteTask extends CancellableTask<Void> {
-								public DeleteTask() {
-									super(null);
-									this.task = ListenableFutureTask.create(new Callable<Void>() {
-										@Override
-										public Void call() throws Exception {
-											deleteReferences(obj.getReferences());
-											return null;
-										}										
-									});
-								}
-							}
-							TASK_RUNNER.execute(new DeleteTask()); 
-						}
-						deleteFuture.set(true);
-					} else {
-						deleteFuture.setException(new IllegalStateException("Multiple records were deleted: " + result.getDeletedCount()));
+		dbcol.deleteMany(filter, (result, error) -> {			
+			if (error == null) {
+				if (result.getDeletedCount() < 1l) {
+					deleteFuture.complete(false);
+				} else if (result.getDeletedCount() == 1l || includeVersions) {
+					// cascade delete
+					if (deleteReferences) {
+						supplyAsync(() -> {
+							deleteReferences(obj.getReferences());
+							return null;
+						});						
 					}
-				} else deleteFuture.setException(t);
-			}
+					deleteFuture.complete(true);
+				} else deleteFuture.completeExceptionally(new IllegalStateException("Multiple records were deleted: " + result.getDeletedCount()));
+			} else deleteFuture.completeExceptionally(error);
 		});
-		// set the new active version to the latest modified record		
-		return transform(deleteFuture, new AsyncFunction<Boolean, Boolean>() {
-			@Override
-			public ListenableFuture<Boolean> apply(final Boolean deleteResult) throws Exception {
-				final SettableFuture<Boolean> activeFuture = SettableFuture.create();
-				if (fromNullable(deleteResult).or(false) && !includeVersions) {
-					addCallback(activateLastModified(getCollection(obj), obj.getLeishvlId()), new FutureCallback<Document>() {
-						@Override
-						public void onSuccess(final Document result) {
+		// set the new active version to the latest modified record
+		deleteFuture.whenCompleteAsync((deleteResult, error) -> {
+			final CompletableFuture<Document> activeFuture = convertCallback2(resultHandler, (document) -> {				
+				return true;
+			});
+			if (error == null) {				
+				if (ofNullable(deleteResult).orElse(false) && !includeVersions) {				
+					activateLastModified(getCollection(obj), obj.getLeishvlId(), activeFuture);
+					activeFuture.whenCompleteAsync((activeDoc, error2) -> {
+						if (error2 == null) {
 							if (LOGGER.isTraceEnabled()) {
-								if (result != null) LOGGER.trace("The new active version is '" + result.getString(LEISHVL_VERSION_FIELD) + "' [collection= " 
+								if (activeDoc != null) LOGGER.trace("The new active version is '" + activeDoc.getString(LEISHVL_VERSION_FIELD) + "' [collection= " 
 										+ obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "]");					
 								else LOGGER.trace("No record was selected as the new active version [collection= " 
 										+ obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "]");
 							}
-							activeFuture.set(true);
-						}
-						@Override
-						public void onFailure(final Throwable t) {
-							activeFuture.setException(t);
-						}
+							activeFuture.complete(activeDoc);
+						} else activeFuture.completeExceptionally(error2);
 					});
-				} else activeFuture.set(true);
-				return activeFuture;
-			}			
-		}, TASK_RUNNER.executor());			
+				} else activeFuture.complete(null);
+			} else activeFuture.completeExceptionally(error);
+		});
 	}
 
 	private void deleteReferences(final Map<String, List<String>> references) {		
@@ -563,18 +499,22 @@ public class MongoConnector {
 	 * Counts the total number of active elements in the specified collection.
 	 */
 	public <T extends LeishvlObject> void totalCount(final LeishvlCollection<T> collection, final @Nullable List<String> excludedStates, final Handler<AsyncResult<Long>> resultHandler) {		
-		totalCount(getCollection(collection), true, excludedStates, resultHandler);
+		totalCount(getCollection(collection), true, excludedStates, wrapCallback2(resultHandler));
 	}
 
 	private <T extends LeishvlObject> void totalCount(final MongoCollection<Document> dbcol, final boolean onlyActive, 
-			final @Nullable List<String> excludedStates, final Handler<AsyncResult<Long>> resultHandler) {
+			final @Nullable List<String> excludedStates, final CompletableFuture<Long> future) {
+		requireNonNull(future, "Future expected.");
 		final Bson activeFilter = (onlyActive ? not(new BsonDocument(LEISHVL_SPARSE_IS_ACTIVE_FIELD, BsonNull.VALUE)) : null);
 		final Bson statesFilter = (excludedStates != null && !excludedStates.isEmpty()) ? not(matchStates(excludedStates)) : null;
 		final Bson filter = (activeFilter != null && statesFilter != null) ? and(activeFilter, statesFilter) 
 				: (activeFilter != null ? activeFilter : (statesFilter != null ? statesFilter : new BsonDocument()));
 		final CountOptions options = new CountOptions().hint(IS_ACTIVE_SPARSE_HINT);
-		dbcol.count(filter, options, wrapCallback(resultHandler));
-	}	
+		dbcol.count(filter, options, (result, error) -> {
+			if (error == null) future.complete(result);
+			else future.completeExceptionally(error);
+		});
+	}
 
 	/**
 	 * Fetches the location of the active elements from the database, returning a collection of GeoJSON points to the caller. The points
@@ -601,25 +541,19 @@ public class MongoConnector {
 		final Bson project = new SimplePipelineStage("$project", fields(include(LEISHVL_ID_FIELD, LEISHVL_LOCATION_FIELD, "_dist")));
 		final Bson match = new SimplePipelineStage("$match", gte("_dist.calculated", new BsonDouble(minDistance)));
 		final AggregateIterable<Document> iterable = dbcol.aggregate(newArrayList(geoNear, project, match));
-		iterable.forEach(new Block<Document>() {
-			@Override
-			public void apply(final Document doc) {
-				try {
-					final T obj = parseDocument(doc, type);
-					features.add(featureBuilder()
-							.property("name", obj.getLeishvlId())
-							.geometry(obj.getLocation())
-							.build());
-				} catch (Exception e) {
-					LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
-							+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
-				}
+		iterable.forEach((doc) -> {
+			try {
+				final T obj = parseDocument(doc, type);
+				features.add(featureBuilder()
+						.property("name", obj.getLeishvlId())
+						.geometry(obj.getLocation())
+						.build());
+			} catch (Exception e) {
+				LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
+						+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
 			}
-		}, convertCallback(resultHandler, new Function<Void, FeatureCollection>() {
-			@Override
-			public FeatureCollection apply(final Void result) {
-				return features;
-			}
+		}, convertCallback(resultHandler, (result) -> {
+			return features;
 		}));
 	}
 
@@ -646,25 +580,19 @@ public class MongoConnector {
 				.find(and(geoWithin, activeFilter, statesFilter))
 				.modifiers(new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT))
 				.projection(fields(include(LEISHVL_ID_FIELD, LEISHVL_LOCATION_FIELD)));
-		iterable.forEach(new Block<Document>() {
-			@Override
-			public void apply(final Document doc) {
-				try {
-					final T obj = parseDocument(doc, type);
-					features.add(featureBuilder()
-							.property("name", obj.getLeishvlId())
-							.geometry(obj.getLocation())
-							.build());
-				} catch (Exception e) {
-					LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
-							+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
-				}
+		iterable.forEach((doc) -> {			
+			try {
+				final T obj = parseDocument(doc, type);
+				features.add(featureBuilder()
+						.property("name", obj.getLeishvlId())
+						.geometry(obj.getLocation())
+						.build());
+			} catch (Exception e) {
+				LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
+						+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
 			}
-		}, convertCallback(resultHandler, new Function<Void, FeatureCollection>() {
-			@Override
-			public FeatureCollection apply(final Void result) {
-				return features;
-			}
+		}, convertCallback(resultHandler, (result) -> {
+			return features;
 		}));
 	}
 
@@ -689,24 +617,18 @@ public class MongoConnector {
 				.sort(orderBy(ascending(field2)))
 				.limit(size2);
 		final String _field2 = field2;
-		iterable.forEach(new Block<Document>() {
-			@Override
-			public void apply(final Document doc) {
-				try {
-					T obj = parseDocument(doc, type);
-					final Object value = getSimpleProperty(obj, _field2);					
-					if (value != null) values.add(value.toString());
-				} catch (Exception e) {
-					LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
-							+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
-				}
+		iterable.forEach((doc) -> {
+			try {
+				T obj = parseDocument(doc, type);
+				final Object value = getSimpleProperty(obj, _field2);					
+				if (value != null) values.add(value.toString());
+			} catch (Exception e) {
+				LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='" 
+						+ doc.get("_id", ObjectId.class).toHexString() + "'].", e);
 			}
-		}, convertCallback(resultHandler, new Function<Void, List<String>>() {
-			@Override
-			public List<String> apply(final Void result) {				
-				return values;
-			}			
-		}));		
+		}, convertCallback(resultHandler, (result) -> {
+			return values;
+		}));	
 	}
 
 	/**
@@ -719,35 +641,24 @@ public class MongoConnector {
 		final MongoCollectionStats stats = new MongoCollectionStats(collection.getCollection());
 		// get indexes
 		final CompletableFuture<Void> indexesFuture = new CompletableFuture<>();
-		dbcol.listIndexes().forEach(new Block<Document>() {
-			@Override
-			public void apply(final Document document) {
-				stats.getIndexes().add(document.toJson());				
-			}
-		}, new SingleResultCallback<Void>() {
-			@Override
-			public void onResult(final Void result, final Throwable t) {
-				if (t == null) indexesFuture.complete(null); else indexesFuture.completeExceptionally(t);
-			}
+		dbcol.listIndexes().forEach((document) -> {			
+			stats.getIndexes().add(document.toJson());
+		}, (result, error) -> {
+			if (error == null) indexesFuture.complete(null); else indexesFuture.completeExceptionally(error);
 		});
 		// count elements
 		final CompletableFuture<Void> countFuture = new CompletableFuture<>();
-		dbcol.count(new SingleResultCallback<Long>() {
-			@Override
-			public void onResult(final Long count, final Throwable t) {
-				if (t == null) {
-					stats.setCount(count);
-					countFuture.complete(null);
-				} else countFuture.completeExceptionally(t);
-			}
-		});
-		// combine the results
-		CompletableFuture.allOf(indexesFuture, countFuture).handleAsync(new BiFunction<Void, Throwable, Void>() {
-			@Override
-			public Void apply(final Void result, final Throwable t) {
-				resultHandler.handle(t == null ? succeededFuture(stats) : failedFuture(t));				
-				return null;
-			}			
+		dbcol.count((result, error) -> {
+			if (error == null) {
+				stats.setCount(result);
+				countFuture.complete(null);
+			} else countFuture.completeExceptionally(error);
+		});		
+		// combine both results to produce collection statistics
+		allOf(indexesFuture, countFuture).whenCompleteAsync((result, error) -> {
+			vertx.runOnContext(v -> {
+				resultHandler.handle(error == null ? succeededFuture(stats) : failedFuture(error));
+			});
 		});
 	}
 
@@ -791,14 +702,22 @@ public class MongoConnector {
 	private <T extends LeishvlObject> MongoCollection<Document> getCollection(final LeishvlObject obj) {
 		checkArgument(obj != null, "Uninitialized object.");
 		checkArgument(isNotBlank(obj.getCollection()), "Uninitialized or invalid collection.");
-		obj.getConfigurer().prepareCollection(vertx);
+		vertx.executeBlocking(future -> {
+			obj.getConfigurer().prepareCollection(this);
+		}, res -> {
+			LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "].");
+		});
 		return holder.db.getCollection(obj.getCollection());
 	}
 
 	private <T extends LeishvlObject> MongoCollection<Document> getCollection(final LeishvlCollection<T> collection) {
 		checkArgument(collection != null, "Uninitialized collection.");
 		checkArgument(isNotBlank(collection.getCollection()), "Uninitialized or invalid collection.");
-		collection.getConfigurer().prepareCollection(vertx);
+		vertx.executeBlocking(future -> {
+			collection.getConfigurer().prepareCollection(this);
+		}, res -> {
+			LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "].");
+		});
 		return holder.db.getCollection(collection.getCollection());
 	}
 
@@ -859,9 +778,7 @@ public class MongoConnector {
 		public <TDocument> BsonDocument toBsonDocument(final Class<TDocument> documentClass, final CodecRegistry codecRegistry) {
 			return new BsonDocument(name, value.toBsonDocument(documentClass, codecRegistry));
 		}
-	}
-
-	// TODO
+	}	
 
 	private <T, R> SingleResultCallback<T> convertCallback(final Handler<AsyncResult<R>> resultHandler, final Function<T, R> converter) {
 		return (result, error) -> {
@@ -885,6 +802,30 @@ public class MongoConnector {
 				}
 			});
 		};
+	}
+
+	private <T, R> CompletableFuture<T> convertCallback2(final Handler<AsyncResult<R>> resultHandler, final Function<T, R> converter) {
+		return new CompletableFuture<T>().whenCompleteAsync((result, error) -> {
+			vertx.runOnContext(v -> {
+				if (error != null) {
+					resultHandler.handle(failedFuture(error));
+				} else {
+					resultHandler.handle(succeededFuture(converter.apply(result)));
+				}
+			});
+		});
+	}
+
+	private <T> CompletableFuture<T> wrapCallback2(final Handler<AsyncResult<T>> resultHandler) {
+		return new CompletableFuture<T>().whenCompleteAsync((result, error) -> {
+			vertx.runOnContext(v -> {
+				if (error != null) {
+					resultHandler.handle(failedFuture(error));
+				} else {
+					resultHandler.handle(succeededFuture(result));
+				}
+			});
+		});
 	}
 
 	private void removeFromMap(final LocalMap<String, MongoHolder> map, final String dbName) {

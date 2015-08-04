@@ -24,7 +24,6 @@ package io.leishvl.storage.mongodb;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.collect.Maps.toMap;
 import static com.google.common.hash.Hashing.murmur3_32;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_DENSE_IS_ACTIVE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_ID_FIELD;
@@ -34,20 +33,16 @@ import static io.leishvl.storage.base.LeishvlObject.LEISHVL_NAMESPACE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_SPARSE_IS_ACTIVE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_STATE_FIELD;
 import static io.leishvl.storage.base.LeishvlObject.LEISHVL_VERSION_FIELD;
-import static io.leishvl.storage.base.StorageDefaults.STO_OPERATION_TIMEOUT_SECS;
 import static java.lang.Math.pow;
 import static java.util.Arrays.asList;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
-
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import org.bson.Document;
 import org.slf4j.Logger;
@@ -56,8 +51,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.UnsignedLong;
 import com.mongodb.client.model.IndexModel;
 import com.mongodb.client.model.IndexOptions;
-
-import io.vertx.core.Vertx;
 
 /**
  * Applies configuration to collections.
@@ -70,7 +63,7 @@ public class MongoCollectionConfigurer {
 	private final String collection;
 	private final List<IndexModel> indexes = newArrayList();
 
-	private final Callable<?> preload;
+	private final Runnable preload;
 
 	private final AtomicBoolean isConfigured = new AtomicBoolean(false);
 
@@ -78,7 +71,7 @@ public class MongoCollectionConfigurer {
 		this(collection, geoIndex, moreIndexes, null);
 	}
 
-	public MongoCollectionConfigurer(final String collection, final boolean geoIndex, final List<IndexModel> moreIndexes, final Callable<?> preload) {
+	public MongoCollectionConfigurer(final String collection, final boolean geoIndex, final List<IndexModel> moreIndexes, final Runnable preload) {
 		this.collection = collection;
 		// common indexes
 		indexes.add(nonUniqueIndexModel(LEISHVL_NAMESPACE_FIELD, false));
@@ -96,36 +89,26 @@ public class MongoCollectionConfigurer {
 		this.preload = preload;
 	}
 
-	public void prepareCollection(final Vertx vertx) {
+	public void prepareCollection(final MongoConnector conn) {
 		final boolean shouldRun = isConfigured.compareAndSet(false, true);
 		if (shouldRun) {
-			vertx.executeBlocking(future -> {
-				// TODO
-			}, res -> {
-				// TODO
-			});
-
-			/* TODO
 			// create indexes
+			final CompletableFuture<List<String>> indexesFuture = new CompletableFuture<>();
 			if (indexes != null && !indexes.isEmpty()) {
-				final ListenableFuture<List<String>> future = MONGODB_CONN.client().createIndexes(collection, indexes);
-				try {
-					future.get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-					LOGGER.info("Collection configured: " + collection);
-				} catch (Exception e) {
-					LOGGER.info("Failed to configure collection: " + collection, e);
-				}				
+				conn.createIndexes(collection, indexes, (result) -> {
+					if (result.succeeded()) {						
+						indexesFuture.complete(result.result());
+						LOGGER.info("Collection configured: " + collection);
+					} else indexesFuture.completeExceptionally(result.cause());
+				});
 			}
 			// run preload operations
 			if (preload != null) {
-				final ListenableFuture<?> future = TASK_RUNNER.submit(preload);
-				try {					
-					future.get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-					LOGGER.info("Preload operation executed: " + collection);
-				} catch (Exception e) {
-					LOGGER.info("Failed to execute preload operations: " + collection, e);
-				}
-			} */
+				indexesFuture.thenRunAsync(preload).whenCompleteAsync((result, error) -> {
+					if (error == null) LOGGER.info("Preload operation executed: " + collection);
+					else LOGGER.info("Failed to execute preload operations: " + collection, error);
+				});				
+			}
 		}
 	}
 
@@ -186,11 +169,8 @@ public class MongoCollectionConfigurer {
 	 */
 	public static IndexModel indexModel(final List<String> fields, final boolean unique, final boolean descending) {
 		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields.");		
-		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), new Function<String, Object>() {
-			@Override
-			public Object apply(final String field) {
-				return (Integer)(descending ? -1 : 1);
-			}
+		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), (input) -> {
+			return (Integer)(descending ? -1 : 1);
 		}))), new IndexOptions().unique(unique).background(true));
 	}
 
@@ -211,11 +191,8 @@ public class MongoCollectionConfigurer {
 	public static IndexModel textIndexModel(final List<String> fields, final String prefix) {
 		checkArgument(fields != null && !fields.isEmpty(), "Uninitialized or invalid fields.");
 		checkArgument(isNotBlank(prefix), "Uninitialized or invalid prefix.");		
-		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), new Function<String, Object>() {
-			@Override
-			public Object apply(final String field) {
-				return "text";
-			}
+		return new IndexModel(new Document(fields.stream().collect(toMap(identity(), (input) -> {
+			return "text";
 		}))), new IndexOptions().background(true).languageOverride("english").name(prefix + ".text_idx"));		
 	}
 
