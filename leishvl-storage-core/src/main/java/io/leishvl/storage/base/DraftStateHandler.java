@@ -23,14 +23,16 @@
 package io.leishvl.storage.base;
 
 import static io.leishvl.storage.base.ObjectState.DRAFT;
-import static io.leishvl.storage.mongodb.MongoConnector.MONGODB_CONN;
+import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
 import static io.leishvl.storage.prov.ProvFactory.addEditProv;
 
 import javax.annotation.Nullable;
 
-import com.google.common.util.concurrent.ListenableFuture;
-
 import io.leishvl.storage.security.User;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Behavior corresponding to the draft state.
@@ -38,11 +40,15 @@ import io.leishvl.storage.security.User;
  */
 public class DraftStateHandler<T extends LeishvlObject> extends ObjectStateHandler<T> {
 
+	public DraftStateHandler(final Vertx vertx, final JsonObject config) {
+		super(vertx, config);
+	}
+
 	@Override
-	public ListenableFuture<Void> save(final T obj, final @Nullable User user, final SaveOptions... options) {
+	public void save(final T obj, final @Nullable User user, final Handler<AsyncResult<Void>> resultHandler, final SaveOptions... options) {
 		if (obj.getState() == null) obj.setState(DRAFT);
 		if (user != null && obj.getProvenance() != null) addEditProv(obj.getProvenance(), user, obj.getLeishvlId());
-		return MONGODB_CONN.client().saveActive(obj, DRAFT.name());
+		createShared(vertx, config).saveActive(obj, resultHandler, DRAFT.name());
 	}	
 
 }

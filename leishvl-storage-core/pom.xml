@@ -26,7 +26,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	
 	<parent>
 		<groupId>io.leishvl</groupId>
-		<artifactId>leishvl</artifactId>
+		<artifactId>leishvl</artifactId>		
 		<version>1.0.0</version>
 		<relativePath>..</relativePath>
 	</parent>
@@ -37,11 +37,17 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<url>http://eubrazilcc.github.io/leishvl/</url>
 	
 	<dependencies>
-		<!-- LeishVL modules -->
+		<!-- LeishVL modules -->		
 		<dependency>
 			<groupId>io.leishvl</groupId>
 			<artifactId>leishvl-core</artifactId>
 			<version>${io.leishvl.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.leishvl</groupId>
+			<artifactId>leishvl-test-tools</artifactId>
+			<version>${io.leishvl.version}</version>
+			<scope>test</scope>
 		</dependency>
 		
 		<!-- Apache Commons -->
@@ -50,29 +56,34 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<artifactId>commons-beanutils</artifactId>
 		</dependency>
 		
-		<!-- Vert.x open-source event-driven application framework and toolkit that runs on the JVM -->
+		<!-- Vert.x -->
 		<dependency>
 			<groupId>io.vertx</groupId>
 			<artifactId>vertx-core</artifactId>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-unit</artifactId>
+			<scope>test</scope>
 		</dependency>
 		
 		<!-- Jackson JSON processor -->			
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+			<scope>provided</scope> <!-- Vert.x -->
 		</dependency>
 
 		<!-- MongoDB Java driver -->
 		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongodb-driver-async</artifactId>
-			<version>${org.mongodb.version}</version>
 		</dependency>
-		<dependency> <!-- legacy driver, needed to support GridFS -->
+		<!-- <dependency> legacy driver, needed to support GridFS
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongo-java-driver</artifactId>
-		</dependency>
+		</dependency> -->
 		
 		<!-- Implementation of the W3C PROV standard -->
 		<dependency> <!-- Provides serialization to JSON -->
@@ -117,7 +128,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					</includes>
 				</configuration>				
 			</plugin>
-			<plugin>
+			<!-- <plugin>
 				<groupId>com.github.joelittlejohn.embedmongo</groupId>
 				<artifactId>embedmongo-maven-plugin</artifactId>
 				<executions>
@@ -142,6 +153,73 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 						</goals>
 					</execution>
 				</executions>
+			</plugin> -->
+			<plugin>
+				<groupId>com.syncleus.maven.plugins</groupId>
+				<artifactId>maven-mongodb-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>start</id>
+						<goals>
+							<goal>start</goal>
+						</goals>
+						<configuration>
+							<port>27017</port>
+							<version>${maven-mongodb-plugin.mongodb.version}</version>
+							<databaseDirectory>/tmp/mongotest</databaseDirectory>
+							<logging>file</logging>
+							<logFile>${project.build.directory}/myfile.log</logFile>
+							<logFileEncoding>utf-8</logFileEncoding>
+							<bindIp>127.0.0.1</bindIp>
+							<!-- <replSet>leishvl</replSet> -->
+							<!-- <wait>true</wait> (blocks indefinitely after the MongoDB instance starts, must be stopped with ctrl-c) -->
+							<!-- <replSetInitiate>
+								<_id>leishvl</_id>
+								<version>1</version>
+								<members>
+									<member>
+										<_id>0</_id>
+										<host>localhost:27017</host>
+										<arbiterOnly>false</arbiterOnly>
+										<buildIndexes>true</buildIndexes>
+										<hidden>false</hidden>
+										<priority>1</priority>
+										<slaveDelay>20</slaveDelay>
+										<votes>3</votes>
+									</member>
+								</members>
+								<settings>
+									<chainingAllowed>true</chainingAllowed>
+									<heartbeatTimeoutSecs>30</heartbeatTimeoutSecs>
+									<getLastErrorModes>
+										<getLastErrorMode>
+											<writeConcern>ACKNOWLEDGED</writeConcern>
+										</getLastErrorMode>
+										<getLastErrorMode>
+											<writeConcern>eastCoast</writeConcern>
+											<tags>
+												<east>1</east>
+											</tags>
+										</getLastErrorMode>
+									</getLastErrorModes>
+								</settings>
+							</replSetInitiate> -->
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<dependency>
+						<groupId>org.slf4j</groupId>
+						<artifactId>slf4j-simple</artifactId>
+						<version>${org.slf4j.version}</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 		</plugins>
 	</build>

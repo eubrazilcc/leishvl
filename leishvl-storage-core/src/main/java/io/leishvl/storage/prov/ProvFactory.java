@@ -23,11 +23,10 @@
 package io.leishvl.storage.prov;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.FluentIterable.from;
-import static com.google.common.collect.Iterables.getFirst;
 import static io.leishvl.storage.prov.Provenance.LVL_PREFIX;
 import static io.leishvl.storage.prov.Provenance.PROVENANCE;
 import static java.util.Arrays.asList;
+import static java.util.Optional.ofNullable;
 import static java.util.UUID.randomUUID;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -35,8 +34,10 @@ import static org.apache.commons.lang3.StringUtils.trimToNull;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
+import javax.sound.midi.Sequence;
 
 import org.geojson.Point;
 import org.openprovenance.prov.model.Activity;
@@ -53,17 +54,9 @@ import org.openprovenance.prov.model.Used;
 import org.openprovenance.prov.model.WasAssociatedWith;
 import org.openprovenance.prov.model.WasInformedBy;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
-import io.leishvl.core.entrez.EntrezHelper;
-import io.leishvl.core.geocoding.GeocodingHelper;
-import io.leishvl.core.http.client.HttpClientProvider;
-import io.leishvl.core.xml.GbSeqXmlBinder;
-import io.leishvl.core.xml.PubMedXmlBinder;
 import io.leishvl.storage.Citation;
-import io.leishvl.storage.Sequence;
 import io.leishvl.storage.security.User;
 
 /**
@@ -345,13 +338,10 @@ public final class ProvFactory {
 		// imported draft is open to future editions
 		final QualifiedName editActQn = PROVENANCE.qn("edit");
 		final QualifiedName revisedDraftQn = PROVENANCE.qn(LVL_PREFIX, "RevisedDraft");
-		final Optional<Statement> revisedDraftOpt = from(bundle.getStatement()).firstMatch(new Predicate<Statement>() {
-			@Override
-			public boolean apply(final Statement input) {
-				return input instanceof Entity && revisedDraftQn.equals(((Entity)input).getId());				
-			}
-		});
-		final Entity revisedDraft = (Entity) revisedDraftOpt.or(PROVENANCE.entity(LVL_PREFIX, "RevisedDraft"));
+		final Optional<Statement> revisedDraftOpt = ofNullable(bundle.getStatement().stream()
+				.filter(stmt -> stmt instanceof Entity && revisedDraftQn.equals(((Entity)stmt).getId()))
+				.findFirst().orElse(null));
+		final Entity revisedDraft = (Entity) revisedDraftOpt.orElse(PROVENANCE.entity(LVL_PREFIX, "RevisedDraft"));
 		if (!revisedDraftOpt.isPresent()) {
 			final Activity editAct = PROVENANCE.factory().newActivity(editActQn);
 			final QualifiedName objQn = PROVENANCE.qn(LVL_PREFIX, lvlId2);
@@ -364,14 +354,11 @@ public final class ProvFactory {
 		}
 
 		// add editor
-		final QualifiedName editorQn = PROVENANCE.qn(LVL_PREFIX, editor.getUserid());
-		final Optional<Statement> editorAgentOpt = from(bundle.getStatement()).firstMatch(new Predicate<Statement>() {
-			@Override
-			public boolean apply(final Statement input) {
-				return input instanceof Agent && editorQn.equals(((Agent)input).getId());				
-			}
-		});
-		final Agent editorAgent = (Agent) editorAgentOpt.or(PROVENANCE.personAgent(editor));
+		final QualifiedName editorQn = PROVENANCE.qn(LVL_PREFIX, editor.getUserid());		
+		final Optional<Statement> editorAgentOpt = ofNullable(bundle.getStatement().stream()
+				.filter(stmt -> stmt instanceof Agent && editorQn.equals(((Agent)stmt).getId()))
+				.findFirst().orElse(null));		
+		final Agent editorAgent = (Agent) editorAgentOpt.orElse(PROVENANCE.personAgent(editor));
 		if (!editorAgentOpt.isPresent()) {			
 			bundle.getStatement().addAll(asList(new Statement[] {
 					editorAgent,					
@@ -384,21 +371,17 @@ public final class ProvFactory {
 	/* Auxiliary methods */
 
 	private static Bundle getBundle(final Document graph) {
-		checkArgument(graph != null, "Uninitialized provenance document");
-		final StatementOrBundle node = getFirst(graph.getStatementOrBundle(), null);
+		checkArgument(graph != null, "Uninitialized provenance document");		
+		final StatementOrBundle node = graph.getStatementOrBundle().stream().filter(stmt -> stmt != null).findFirst().orElse(null);
 		checkArgument(node != null && node instanceof Bundle, "Uninitialized or invalid provenance bundle");
 		return (Bundle)node;
 	}
 
 	private static Agent getSystem(final Bundle bundle) {
-		final QualifiedName systemQn = PROVENANCE.lvlAgent().getId();
-		final Optional<Statement> systemOpt = from(bundle.getStatement()).firstMatch(new Predicate<Statement>() {
-			@Override
-			public boolean apply(final Statement input) {
-				return input instanceof Agent && systemQn.equals(((Agent)input).getId());				
-			}
-		});
-		return (Agent) systemOpt.orNull();
+		final QualifiedName systemQn = PROVENANCE.lvlAgent().getId();		
+		return (Agent) bundle.getStatement().stream()
+				.filter(stmt -> stmt instanceof Agent && systemQn.equals(((Agent)stmt).getId()))
+				.findFirst().orElse(null);
 	}
 
 	private static String parseParam(final String param) {
@@ -499,5 +482,13 @@ public final class ProvFactory {
 			return original;
 		}
 	}
+
+	// TODO
+
+	public static class EntrezHelper { }
+	public static class HttpClientProvider { }
+	public static class GbSeqXmlBinder { }
+	public static class PubMedXmlBinder { }
+	public static class GeocodingHelper { }		
 
 }

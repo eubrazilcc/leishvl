@@ -25,14 +25,16 @@ package io.leishvl.storage.base;
 import static io.leishvl.storage.base.LeishvlObject.randomVersion;
 import static io.leishvl.storage.base.ObjectState.DRAFT;
 import static io.leishvl.storage.base.ObjectState.RELEASE;
-import static io.leishvl.storage.mongodb.MongoConnector.MONGODB_CONN;
+import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
 import static io.leishvl.storage.prov.ProvFactory.newObsoleteProv;
 
 import javax.annotation.Nullable;
 
-import com.google.common.util.concurrent.ListenableFuture;
-
 import io.leishvl.storage.security.User;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Behavior corresponding to the obsolete state.
@@ -40,10 +42,14 @@ import io.leishvl.storage.security.User;
  */
 public class ObsoleteStateHandler<T extends LeishvlObject> extends ObjectStateHandler<T> {
 
+	public ObsoleteStateHandler(final Vertx vertx, final JsonObject config) {
+		super(vertx, config);
+	}
+
 	@Override
-	public ListenableFuture<Void> save(final T obj, final @Nullable User user, final SaveOptions... options) {		
+	public void save(final T obj, final @Nullable User user, final Handler<AsyncResult<Void>> resultHandler, final SaveOptions... options) {		
 		if (user != null) obj.setProvenance(newObsoleteProv(user, obj.getLeishvlId()));
-		return MONGODB_CONN.client().saveAsVersion(randomVersion(), obj, DRAFT.name(), RELEASE.name());
+		createShared(vertx, config).saveAsVersion(randomVersion(), obj, resultHandler, DRAFT.name(), RELEASE.name());
 	}
 
 }

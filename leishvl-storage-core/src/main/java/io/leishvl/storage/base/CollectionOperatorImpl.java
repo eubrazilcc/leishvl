@@ -22,14 +22,15 @@
 
 package io.leishvl.storage.base;
 
-import static com.google.common.base.Optional.absent;
-import static com.google.common.base.Optional.fromNullable;
-import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.Futures.transform;
-import static io.leishvl.storage.mongodb.MongoConnector.MONGODB_CONN;
+import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static java.util.Optional.empty;
+import static java.util.Optional.ofNullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -38,14 +39,10 @@ import org.geojson.FeatureCollection;
 import org.geojson.Point;
 import org.geojson.Polygon;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
-
 import io.leishvl.storage.Filters;
 import io.leishvl.storage.mongodb.MongoCollectionStats;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 
 /**
  * Base implementation of the {@link CollectionOperator}.
@@ -55,71 +52,62 @@ public abstract class CollectionOperatorImpl<T extends LeishvlObject> implements
 
 	private final LeishvlCollection<T> leishvlCol;
 
-	private Optional<List<String>> excludedStates = absent(); // (optional) objects in these states are excluded from the collection
+	private Optional<List<String>> excludedStates = empty(); // (optional) objects in these states are excluded from the collection
 
 	public CollectionOperatorImpl(final LeishvlCollection<T> leishvlCol, final @Nullable List<String> excludedStates) {
 		this.leishvlCol = leishvlCol;
-		this.excludedStates = fromNullable(excludedStates);
-	}	
+		this.excludedStates = ofNullable(excludedStates);
+	}
 
 	@Override
-	public ListenableFuture<Integer> fetch(final int start, final int size, final @Nullable Filters filters, final @Nullable Map<String, Boolean> sorting, 
-			final @Nullable Map<String, Boolean> projections) {
+	public void fetch(final int start, final int size, final @Nullable Filters filters, final @Nullable Map<String, Boolean> sorting, 
+			final @Nullable Map<String, Boolean> projections, final Handler<AsyncResult<Integer>> resultHandler) {
 		final MutableLong totalCount = new MutableLong(0l);
-		final ListenableFuture<List<T>> findFuture = MONGODB_CONN.client().findActive(leishvlCol, leishvlCol.getType(), start, size, filters, sorting, projections, totalCount, 
-				excludedStates.orNull());
-		final SettableFuture<Integer> countFuture = SettableFuture.create();
-		addCallback(findFuture, new FutureCallback<List<T>>() {
+		createShared(leishvlCol.vertx, leishvlCol.config).findActive(leishvlCol, leishvlCol.getType(), start, size, filters, sorting, projections, totalCount, excludedStates.orElse(null), new Handler<AsyncResult<List<T>>>(){
 			@Override
-			public void onSuccess(final List<T> result) {
-				leishvlCol.setElements(result);
-				leishvlCol.setTotalCount(totalCount.getValue().intValue());
-				countFuture.set(result != null ? result.size() : 0);
-			}
-			@Override
-			public void onFailure(final Throwable t) {				
-				countFuture.setException(t);
-			}
-		});
-		return transform(findFuture, new AsyncFunction<List<T>, Integer>() {
-			@Override
-			public ListenableFuture<Integer> apply(final List<T> input) throws Exception {				
-				return countFuture;
-			}
+			public void handle(final AsyncResult<List<T>> event) {
+				if (event.succeeded()) {
+					leishvlCol.setElements(event.result());
+					leishvlCol.setTotalCount(totalCount.getValue().intValue());
+					resultHandler.handle(succeededFuture(event.result() != null ? event.result().size() : 0));					
+				} else {
+					resultHandler.handle(failedFuture(event.cause()));
+				}
+			}			
 		});
 	}
 
 	@Override
-	public ListenableFuture<FeatureCollection> getNear(final Point point, final double minDistance, final double maxDistance) {
-		return MONGODB_CONN.client().fetchNear(leishvlCol, leishvlCol.getType(), point.getCoordinates().getLongitude(), point.getCoordinates().getLatitude(), 
-				minDistance, maxDistance, excludedStates.orNull());
+	public void getNear(final Point point, final double minDistance, final double maxDistance, final Handler<AsyncResult<FeatureCollection>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).fetchNear(leishvlCol, leishvlCol.getType(), point.getCoordinates().getLongitude(), point.getCoordinates().getLatitude(), 
+				minDistance, maxDistance, excludedStates.orElse(null), resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<FeatureCollection> getWithin(final Polygon polygon) {
-		return MONGODB_CONN.client().fetchWithin(leishvlCol, leishvlCol.getType(), polygon, excludedStates.orNull());
+	public void getWithin(final Polygon polygon, final Handler<AsyncResult<FeatureCollection>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).fetchWithin(leishvlCol, leishvlCol.getType(), polygon, excludedStates.orElse(null), resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<Long> totalCount() {
-		return MONGODB_CONN.client().totalCount(leishvlCol, excludedStates.orNull());		
+	public void totalCount(final Handler<AsyncResult<Long>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).totalCount(leishvlCol, excludedStates.orElse(null), resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<List<String>> typeahead(final String field, final String query, final int size) {
-		return MONGODB_CONN.client().typeahead(leishvlCol, leishvlCol.getType(), field, query, size, excludedStates.orNull());
+	public void typeahead(final String field, final String query, final int size, final Handler<AsyncResult<List<String>>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).typeahead(leishvlCol, leishvlCol.getType(), field, query, size, excludedStates.orElse(null), resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<MongoCollectionStats> stats() {
-		return MONGODB_CONN.client().stats(leishvlCol);
+	public void stats(final Handler<AsyncResult<MongoCollectionStats>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).stats(leishvlCol, resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<Void> drop() {
-		return MONGODB_CONN.client().drop(leishvlCol);
+	public void drop(final Handler<AsyncResult<Void>> resultHandler) {
+		createShared(leishvlCol.vertx, leishvlCol.config).drop(leishvlCol, resultHandler);
 	}
-	
+
 	@Override
 	public LeishvlCollection<T> collection() {
 		return leishvlCol;
@@ -127,7 +115,7 @@ public abstract class CollectionOperatorImpl<T extends LeishvlObject> implements
 
 	@Override
 	public List<String> excludedStates() {
-		return excludedStates.orNull();
+		return excludedStates.orElse(null);
 	}	
 
 }

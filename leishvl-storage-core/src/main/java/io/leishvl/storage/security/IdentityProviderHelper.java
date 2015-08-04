@@ -24,9 +24,9 @@ package io.leishvl.storage.security;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Range.open;
-import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.apache.commons.lang.StringUtils.trimToEmpty;
-import static org.apache.commons.lang.StringUtils.defaultIfEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 import java.util.List;
 

@@ -468,7 +468,6 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<module>leishvl-test-tools</module>
 		<module>leishvl-core</module>
 		<module>leishvl-storage-core</module>
-		<module>leishvl-storage-core2</module>
 		<module>leishvl-microservices-core</module>
 		<module>leishvl-collection</module>
 		<module>leishvl-drive</module>

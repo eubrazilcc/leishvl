@@ -31,10 +31,10 @@ import org.geojson.FeatureCollection;
 import org.geojson.Point;
 import org.geojson.Polygon;
 
-import com.google.common.util.concurrent.ListenableFuture;
-
 import io.leishvl.storage.Filters;
 import io.leishvl.storage.mongodb.MongoCollectionStats;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 
 /**
  * Operates on a specific subset of a collection.
@@ -43,7 +43,7 @@ import io.leishvl.storage.mongodb.MongoCollectionStats;
 public interface CollectionOperator<T extends LeishvlObject> {
 
 	/* Database operations */
-	
+
 	/**
 	 * Loads a view of the collection that contains the elements in the specified range. The elements are sorted by their keys, in ascending order.
 	 * Optionally, the database response can be filtered (if the filter is invalid, an empty view will be created).
@@ -53,55 +53,59 @@ public interface CollectionOperator<T extends LeishvlObject> {
 	 * @param sorting - (optional) sorting order
 	 * @param projection - (optional) specifies the fields to return. Set the field name to <tt>true</tt> to include the field, <tt>false</tt>
 	 *        to exclude the field. To return all fields in the matching document, omit this parameter
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */	
-	ListenableFuture<Integer> fetch(int start, int size, @Nullable Filters filters, @Nullable Map<String, Boolean> sorting, 
-			@Nullable Map<String, Boolean> projections);
+	void fetch(int start, int size, @Nullable Filters filters, @Nullable Map<String, Boolean> sorting, 
+			@Nullable Map<String, Boolean> projections, Handler<AsyncResult<Integer>> resultHandler);
 
 	/**
-	 * Gets the elements that are within the specified distance (in meters) from the specified center point (using WGS84).
+	 * Gets the elements that are within the specified distance (in meters) from the specified center point (using WGS84) and returns a collection 
+	 * of GeoJSON points with the location of the elements matching the query, annotated with the feature <tt>name</tt> which contains the global 
+	 * identifier of the element.
 	 * @param point - longitude, latitude pair represented in WGS84 coordinate reference system (CRS)
 	 * @param minDistance - minimum distance
 	 * @param maxDistance - limits the results to those elements that fall within the specified distance (in meters) from the center point
-	 * @return a collection of GeoJSON points with the location of the elements matching the query, annotated with the feature <tt>name</tt>
-	 *         which contains the global identifier of the element.
-	 */
-	ListenableFuture<FeatureCollection> getNear(Point point, double minDistance, double maxDistance);
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails 
+	 */	
+	void getNear(Point point, double minDistance, double maxDistance, Handler<AsyncResult<FeatureCollection>> resultHandler);
 
 	/**
-	 * Gets the elements that exist entirely within the defined polygon.
+	 * Gets the elements that exist entirely within the defined polygon and returns a collection of GeoJSON points with the location of the 
+	 * elements matching the query, annotated with the feature <tt>name</tt> which contains the global identifier of the element.
 	 * @param polygon - geometric shape with at least four edges
-	 * @return a collection of GeoJSON points with the location of the elements matching the query, annotated with the feature <tt>name</tt>
-	 *         which contains the global identifier of the element.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */
-	ListenableFuture<FeatureCollection> getWithin(Polygon polygon);
+	void getWithin(Polygon polygon, Handler<AsyncResult<FeatureCollection>> resultHandler);
 
 	/**
 	 * Gets the total number of elements contained in the collection.
-	 * @return
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */
-	ListenableFuture<Long> totalCount();	
+	void totalCount(Handler<AsyncResult<Long>> resultHandler);	
 
 	/**
 	 * Searches a field for the specified query, returning a list of values that match the query.
 	 * @param field - field to query against
 	 * @param query - the query to match
 	 * @param size - maximum number of elements returned
-	 * @return a future whose response is the values that matches the query.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */
-	ListenableFuture<List<String>> typeahead(String field, String query, int size);
+	void typeahead(String field, String query, int size, Handler<AsyncResult<List<String>>> resultHandler);
 
 	/**
 	 * Collects statistics about this collection.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */
-	ListenableFuture<MongoCollectionStats> stats();
+	void stats(Handler<AsyncResult<MongoCollectionStats>> resultHandler);
 
 	/**
 	 * Drop the collection from the database.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 */
-	ListenableFuture<Void> drop();	
-	
+	void drop(Handler<AsyncResult<Void>> resultHandler);	
+
 	/* general operations */
-	
+
 	/**
 	 * Gets the target collection.
 	 * @return the target collection.

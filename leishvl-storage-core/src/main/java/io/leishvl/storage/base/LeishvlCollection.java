@@ -23,8 +23,6 @@
 package io.leishvl.storage.base;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.base.Predicates.notNull;
-import static com.google.common.collect.FluentIterable.from;
 import static com.google.common.collect.Lists.newArrayList;
 import static io.leishvl.core.util.CollectionUtils.collectionToString;
 import static io.leishvl.core.util.CollectionUtils.mapToString;
@@ -32,10 +30,12 @@ import static io.leishvl.core.util.PaginationUtils.firstEntryOf;
 import static io.leishvl.core.util.PaginationUtils.totalPages;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonMapper.objectToJson;
 import static java.lang.Math.max;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -47,10 +47,6 @@ import org.slf4j.Logger;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import io.leishvl.core.FormattedQueryParam;
 import io.leishvl.storage.Filters;
@@ -59,6 +55,10 @@ import io.leishvl.storage.Linkable;
 import io.leishvl.storage.mongodb.MongoCollectionConfigurer;
 import io.leishvl.storage.mongodb.MongoCollectionStats;
 import io.leishvl.storage.mongodb.jackson.MongoJsonOptions;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Any collection of {@link LeishvlObject}. This class provides an abstraction of the database where the elements are stored in a collection
@@ -70,6 +70,11 @@ import io.leishvl.storage.mongodb.jackson.MongoJsonOptions;
  */
 @JsonIgnoreProperties({ "page", "perPage", "query", "sort", "order", "pageFirstEntry", "totalPages" })
 public abstract class LeishvlCollection<T extends LeishvlObject> implements Linkable, CollectionOperator<T> {
+
+	@JsonIgnore
+	protected final Vertx vertx;
+	@JsonIgnore
+	protected final JsonObject config;
 	
 	@JsonIgnore
 	protected final Logger logger;
@@ -97,14 +102,16 @@ public abstract class LeishvlCollection<T extends LeishvlObject> implements Link
 
 	private List<T> elements = newArrayList(); // elements of the current page
 
-	public LeishvlCollection(final String collection, final Class<T> type, final MongoCollectionConfigurer configurer, final Logger logger) {
+	public LeishvlCollection(final Vertx vertx, final JsonObject config, final String collection, final Class<T> type, final MongoCollectionConfigurer configurer, final Logger logger) {
+		this.vertx = vertx;
+		this.config = config;
 		this.collection = collection;
 		this.type = type;
 		this.configurer = configurer;
 		this.logger = logger;
 		this.defaultOperator = new AllCollectionOperator<>(this);
 	}
-
+	
 	public String getCollection() {
 		return collection;
 	}
@@ -120,39 +127,39 @@ public abstract class LeishvlCollection<T extends LeishvlObject> implements Link
 	/* Collection operator implementation */
 
 	@Override
-	public ListenableFuture<Integer> fetch(final int start, final int size, final @Nullable Filters filters, final @Nullable Map<String, Boolean> sorting, 
-			final @Nullable Map<String, Boolean> projections) {
-		return defaultOperator.fetch(start, size, filters, sorting, projections);
+	public void fetch(final int start, final int size, final @Nullable Filters filters, final @Nullable Map<String, Boolean> sorting, 
+			final @Nullable Map<String, Boolean> projections, final Handler<AsyncResult<Integer>> resultHandler) {
+		defaultOperator.fetch(start, size, filters, sorting, projections, resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<FeatureCollection> getNear(final Point point, final double minDistance, final double maxDistance) {
-		return defaultOperator.getNear(point, minDistance, maxDistance);
+	public void getNear(final Point point, final double minDistance, final double maxDistance, final Handler<AsyncResult<FeatureCollection>> resultHandler) {
+		defaultOperator.getNear(point, minDistance, maxDistance, resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<FeatureCollection> getWithin(final Polygon polygon) {
-		return defaultOperator.getWithin(polygon);
+	public void getWithin(final Polygon polygon, final Handler<AsyncResult<FeatureCollection>> resultHandler) {
+		defaultOperator.getWithin(polygon, resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<Long> totalCount() {
-		return defaultOperator.totalCount();	
+	public void totalCount(final Handler<AsyncResult<Long>> resultHandler) {
+		defaultOperator.totalCount(resultHandler);	
 	}
 
 	@Override
-	public ListenableFuture<List<String>> typeahead(final String field, final String query, final int size) {
-		return defaultOperator.typeahead(field, query, size);
+	public void typeahead(final String field, final String query, final int size, final Handler<AsyncResult<List<String>>> resultHandler) {
+		defaultOperator.typeahead(field, query, size, resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<MongoCollectionStats> stats() {
-		return defaultOperator.stats();
+	public void stats(final Handler<AsyncResult<MongoCollectionStats>> resultHandler) {
+		defaultOperator.stats(resultHandler);
 	}
 
 	@Override
-	public ListenableFuture<Void> drop() {
-		return defaultOperator.drop();
+	public void drop(final Handler<AsyncResult<Void>> resultHandler) {
+		defaultOperator.drop(resultHandler);
 	}
 
 	@Override
@@ -179,13 +186,11 @@ public abstract class LeishvlCollection<T extends LeishvlObject> implements Link
 		}
 	}
 
-	public List<String> ids() {
-		return from(elements != null ? elements : Collections.<T>emptyList()).transform(new Function<T, String>() {
-			@Override
-			public String apply(final T input) {
-				return input.getLeishvlId();
-			}
-		}).filter(notNull()).toList();
+	public List<String> ids() {		
+		return (elements != null ? elements : Collections.<T>emptyList()).stream()
+				.filter(element -> element != null)
+				.map(element -> element.getLeishvlId())
+				.collect(Collectors.toList());
 	}
 
 	/**
@@ -211,12 +216,10 @@ public abstract class LeishvlCollection<T extends LeishvlObject> implements Link
 	 * @return the element specified by id, or {@code null} if the view contains no entry for the id.
 	 */
 	public T get(final String id) {
-		return Iterables.find(elements, new Predicate<T>() {
-			@Override
-			public boolean apply(final T item) {
-				return item.getLeishvlId().equals(id);
-			}			
-		}, null);
+		requireNonNull(id, "Identifier expected.");
+		return (elements != null ? elements : Collections.<T>emptyList()).stream()
+				.filter(element -> element.getLeishvlId().equals(id))
+				.findFirst().orElse(null);
 	}
 
 	/* Pagination */

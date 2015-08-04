@@ -23,14 +23,14 @@
 package io.leishvl.storage.base;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
-import static com.google.common.base.Optional.absent;
-import static com.google.common.base.Optional.fromNullable;
 import static com.google.common.collect.Maps.newHashMap;
 import static io.leishvl.core.util.NamingUtils.urlEncodeUtf8;
 import static io.leishvl.storage.base.ObjectState.DRAFT;
 import static io.leishvl.storage.base.ObjectState.OBSOLETE;
 import static io.leishvl.storage.base.ObjectState.RELEASE;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonMapper.objectToJson;
+import static java.util.Optional.empty;
+import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.RandomStringUtils.random;
 import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
@@ -40,6 +40,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -55,9 +56,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListenableFuture;
 
 import io.leishvl.storage.Link;
 import io.leishvl.storage.Linkable;
@@ -66,6 +65,10 @@ import io.leishvl.storage.mongodb.jackson.MongoJsonOptions;
 import io.leishvl.storage.prov.jackson.ProvDocumentDeserializer;
 import io.leishvl.storage.prov.jackson.ProvDocumentSerializer;
 import io.leishvl.storage.security.User;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Classes should extend this class to support common features of the LeishVL, such as geolocalization (an optional GeoJSON point can be
@@ -87,6 +90,11 @@ public abstract class LeishvlObject implements Linkable {
 	public static final String LEISHVL_DENSE_IS_ACTIVE_FIELD = "isActive2";
 
 	@JsonIgnore
+	protected final Vertx vertx;
+	@JsonIgnore
+	protected final JsonObject config;
+
+	@JsonIgnore
 	protected final Logger logger;
 	@JsonIgnore
 	private final String collection;
@@ -95,14 +103,14 @@ public abstract class LeishvlObject implements Linkable {
 	@JsonIgnore
 	private String dbId; // database identifier
 
-	private Optional<String> namespace = absent(); // (optional) namespace
+	private Optional<String> namespace = empty(); // (optional) namespace
 	private String leishvlId; // LeishVL unique identifier
 	private String version; // version identifier
 
-	private Optional<Point> location = absent(); // (optional) geospatial location	
+	private Optional<Point> location = empty(); // (optional) geospatial location	
 	@JsonSerialize(using = ProvDocumentSerializer.class) @JsonDeserialize(using = ProvDocumentDeserializer.class)	
-	private Optional<Document> provenance = absent(); // (optional) provenance	
-	private Optional<ObjectState> state = absent(); // (optional) state
+	private Optional<Document> provenance = empty(); // (optional) provenance	
+	private Optional<ObjectState> state = empty(); // (optional) state
 
 	private Date lastModified; // last modification date
 	private String isActive; // set to the GUID value in the active version (in most cases, the latest version)
@@ -115,16 +123,19 @@ public abstract class LeishvlObject implements Linkable {
 	protected String urlSafeLeishvlId;
 
 	@JsonIgnore
-	private ObjectStateHandler<LeishvlObject> stateHandler = new DraftStateHandler<>();
+	private ObjectStateHandler<LeishvlObject> stateHandler;
 
 	private static final List<String> FIELDS_TO_SUPPRESS = ImmutableList.<String>of("logger", "collection", "configurer", "urlSafeNamespace", 
 			"urlSafeLvlId", "stateHandler");
 
-	public LeishvlObject(final String collection, final MongoCollectionConfigurer configurer, final Logger logger) {
+	public LeishvlObject(final Vertx vertx, final JsonObject config, final String collection, final MongoCollectionConfigurer configurer, final Logger logger) {
+		this.vertx = vertx;
+		this.config = config;
 		this.collection = collection;
 		this.configurer = configurer;
 		this.logger = logger;
 		this.references = newHashMap();
+		this.stateHandler = new DraftStateHandler<>(vertx, config);
 	}
 
 	public String getCollection() {
@@ -144,12 +155,12 @@ public abstract class LeishvlObject implements Linkable {
 	}
 
 	public @Nullable String getNamespace() {
-		return namespace.orNull();
+		return namespace.orElse(null);
 	}
 
 	public void setNamespace(final @Nullable String namespace) {
-		this.namespace = fromNullable(trimToNull(namespace));
-		setUrlSafeNamespace(urlEncodeUtf8(this.namespace.or("")));
+		this.namespace = ofNullable(trimToNull(namespace));
+		setUrlSafeNamespace(urlEncodeUtf8(this.namespace.orElse("")));
 	}
 
 	public String getLeishvlId() {
@@ -170,37 +181,37 @@ public abstract class LeishvlObject implements Linkable {
 	}
 
 	public @Nullable Point getLocation() {
-		return location.orNull();
+		return location.orElse(null);
 	}
 
 	public void setLocation(final @Nullable Point location) {
-		this.location = fromNullable(location);
+		this.location = ofNullable(location);
 	}
 
 	public @Nullable Document getProvenance() {
-		return provenance.orNull();
+		return provenance.orElse(null);
 	}
 
 	public void setProvenance(final @Nullable Document provenance) {
-		this.provenance = fromNullable(provenance);
+		this.provenance = ofNullable(provenance);
 	}
 
 	public ObjectState getState() {
-		return state.orNull();
+		return state.orElse(null);
 	}
 
 	public void setState(final @Nullable ObjectState state) {
-		this.state = fromNullable(state);
-		switch (this.state.or(DRAFT)) {
+		this.state = ofNullable(state);
+		switch (this.state.orElse(DRAFT)) {
 		case RELEASE:			
-			stateHandler = new ReleaseStateHandler<>();
+			stateHandler = new ReleaseStateHandler<>(vertx, config);
 			break;
 		case OBSOLETE:
-			stateHandler = new ObsoleteStateHandler<>();
+			stateHandler = new ObsoleteStateHandler<>(vertx, config);
 			break;
 		case DRAFT:
 		default:
-			stateHandler = new DraftStateHandler<>();
+			stateHandler = new DraftStateHandler<>(vertx, config);
 			break;
 		}
 	}
@@ -259,43 +270,43 @@ public abstract class LeishvlObject implements Linkable {
 
 	/**
 	 * Inserts or update an element in the database.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param options - operation options
-	 * @return a future.
 	 */
-	public ListenableFuture<Void> save(final SaveOptions... options) {
-		return save(null, options);
+	public void save(final Handler<AsyncResult<Void>> resultHandler, final SaveOptions... options) {
+		save(null, resultHandler, options);
 	}
 
 	/**
 	 * Inserts or update an element in the database.
 	 * @param user - identity of the user who is responsible for editing this object
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param options - operation options
-	 * @return a future.
 	 */
-	public ListenableFuture<Void> save(final @Nullable User user, final SaveOptions... options) {
-		return stateHandler.save(this, user, options);
+	public void save(final @Nullable User user, final Handler<AsyncResult<Void>> resultHandler, final SaveOptions... options) {
+		stateHandler.save(this, user, resultHandler, options);
 	}
 
 	/**
 	 * Gets from the database the element that has the key that coincides with this object.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param options - operation options
-	 * @return a future.
 	 */
-	public ListenableFuture<Void> fetch(final FetchOptions... options) {
-		return stateHandler.fetch(this, options);
+	public void fetch(final Handler<AsyncResult<Void>> resultHandler, final FetchOptions... options) {
+		stateHandler.fetch(this, resultHandler, options);
 	}
 
 	/**
 	 * Removes the element from the database.
+	 * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
 	 * @param options - operation options
-	 * @return a future.
 	 */
-	public ListenableFuture<Boolean> delete(final DeleteOptions... options) {
-		return stateHandler.delete(this, options);
+	public void delete(final Handler<AsyncResult<Boolean>> resultHandler, final DeleteOptions... options) {
+		stateHandler.delete(this, resultHandler, options);
 	}
 
-	public ListenableFuture<List<LeishvlObject>> versions() {
-		return stateHandler.versions(this);
+	public void versions(final Handler<AsyncResult<List<LeishvlObject>>> resultHandler) {
+		stateHandler.versions(this, resultHandler);
 	}
 
 	/**
@@ -319,12 +330,12 @@ public abstract class LeishvlObject implements Linkable {
 			return false;
 		}
 		final LeishvlObject other = LeishvlObject.class.cast(obj);		
-		return Objects.equals(namespace.orNull(), other.namespace.orNull())
+		return Objects.equals(namespace.orElse(null), other.namespace.orElse(null))
 				&& Objects.equals(leishvlId, other.leishvlId)
 				&& Objects.equals(version, other.version)
-				&& Objects.equals(location.orNull(), other.location.orNull())
+				&& Objects.equals(location.orElse(null), other.location.orElse(null))
 				&& (provenance.isPresent() == other.provenance.isPresent())
-				&& Objects.equals(state.orNull(), other.state.orNull())
+				&& Objects.equals(state.orElse(null), other.state.orElse(null))
 				&& Objects.equals(lastModified, other.lastModified)
 				&& Objects.equals(isActive, other.isActive)
 				&& Objects.equals(isActive2, other.isActive2)
@@ -340,12 +351,12 @@ public abstract class LeishvlObject implements Linkable {
 	public String toString() {
 		return toStringHelper(this)
 				.add("dbId", dbId)
-				.add("namespace", namespace.orNull())
+				.add("namespace", namespace.orElse(null))
 				.add("leishvlId", leishvlId)
 				.add("version", version)
-				.add("location", location.orNull())
+				.add("location", location.orElse(null))
 				.add("provenance", "<<not displayed>>")
-				.add("state", state.or(DRAFT))
+				.add("state", state.orElse(DRAFT))
 				.add("lastModified", lastModified)
 				.add("isActive", isActive)
 				.add("isActive2", isActive2)
