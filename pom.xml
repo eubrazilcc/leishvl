@@ -86,7 +86,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<org.antlr.version>4.5.1</org.antlr.version>
 		<org.apache.httpcomponents.version>4.5</org.apache.httpcomponents.version>
 		<org.hamcrest.version>1.3</org.hamcrest.version> <!-- coincides with JUnit dependency -->
-		<org.openprovenance.prov.version>0.7.0</org.openprovenance.prov.version>
+		<org.openprovenance.prov.version>0.7.1</org.openprovenance.prov.version>
 		<org.slf4j.version>1.7.12</org.slf4j.version>
 		<org.mongodb.version>3.0.3</org.mongodb.version>
 		
@@ -113,7 +113,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<dependencyManagement>
 		<dependencies>
 		
-			<!-- Logback -->
+			<!-- Logback logging framework -->
 
 			<dependency> <!-- classic module (uses the SLF4J API) -->
 				<groupId>ch.qos.logback</groupId>
@@ -281,7 +281,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<dependency> <!-- core -->
 				<groupId>org.apache.tika</groupId>
 				<artifactId>tika-core</artifactId>
-				<version>1.8</version>
+				<version>1.10</version>
 			</dependency>
 			
 			<!-- MongoDB Java driver -->
@@ -451,10 +451,10 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 							<executable>mvn</executable>
 							<arguments>
 								<argument>install:install-file</argument>
-								<argument>-Dfile=external-deps/api-model-${e-science-central.version}.jar</argument>
+								<argument>-Dfile=external-deps/api-model-${com.connexience.esc.version}.jar</argument>
 								<argument>-DgroupId=com.connexience</argument>
 								<argument>-DartifactId=api-model</argument>
-								<argument>-Dversion=${e-science-central.version}</argument>
+								<argument>-Dversion=${com.connexience.esc.version}</argument>
 								<argument>-Dpackaging=jar</argument>
 							</arguments>
 						</configuration>

@@ -22,26 +22,23 @@
 
 package io.leishvl.collection;
 
-import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.collect.Maps.newHashMap;
-import static com.google.common.collect.Sets.newHashSet;
-import static java.lang.Runtime.getRuntime;
-
-import java.util.Map;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
-import org.apache.commons.daemon.DaemonContext;
-import org.apache.commons.daemon.DaemonController;
-import org.apache.commons.daemon.DaemonInitException;
-
 import com.google.common.util.concurrent.ServiceManager;
-
 import io.leishvl.microservices.LeishvlDaemon;
 import io.leishvl.microservices.VertxService;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
+import org.apache.commons.daemon.DaemonContext;
+import org.apache.commons.daemon.DaemonController;
+
+import java.util.Map;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Sets.newHashSet;
+import static java.lang.Runtime.getRuntime;
 
 /**
  * Driver daemon.
@@ -50,13 +47,13 @@ import io.vertx.core.json.JsonObject;
 public class AppDaemon extends LeishvlDaemon {
 
 	public AppDaemon() {
-		super(AppDaemon.class);		
+		super(AppDaemon.class);
 	}
 
 	public static void main(final String[] args) throws Exception {
 		final AppDaemon daemon = new AppDaemon();
 		getRuntime().addShutdownHook(new Thread() {
-			public void run() {				
+			public void run() {
 				try {
 					daemon.stop();
 				} catch (Exception e) {
@@ -69,11 +66,11 @@ public class AppDaemon extends LeishvlDaemon {
 				}
 			}
 		});
-		daemon.init(new DaemonContext() {			
+		daemon.init(new DaemonContext() {
 			@Override
 			public DaemonController getController() {
 				return null;
-			}			
+			}
 			@Override
 			public String[] getArguments() {
 				return args;
@@ -83,12 +80,12 @@ public class AppDaemon extends LeishvlDaemon {
 	}
 
 	@Override
-	public void init(final DaemonContext daemonContext) throws DaemonInitException, Exception {
+	public void init(final DaemonContext daemonContext) throws Exception {
 		// parse application arguments
 		CommandLine cmd = null;
 		try {
 			cmd = parseParameters(daemonContext.getArguments(), new Options());
-		} catch (Exception e) {			
+		} catch (Exception e) {
 			logger.error("Parsing options failed.", e);
 			System.exit(1);
 		}
@@ -100,9 +97,9 @@ public class AppDaemon extends LeishvlDaemon {
 		final VertxOptions vertxOptions = new VertxOptions().setClustered(true)
 				.setClusterHost(config.getString("leishvl.cluster.host"));
 		final Map<String, Object> verticleConfig = newHashMap();
-		verticleConfig.put("http-server.port", config.getInt("leishvl.http-server.port"));		
+		verticleConfig.put("http-server.port", config.getInt("leishvl.http-server.port"));
 		verticleConfig.put("cluster.members", config.getStringList("leishvl.cluster.members"));
-		final DeploymentOptions deploymentOptions = new DeploymentOptions()				
+		final DeploymentOptions deploymentOptions = new DeploymentOptions()
 				.setInstances(config.getInt("leishvl.http-server.instances"))
 				.setConfig(new JsonObject(verticleConfig));
 		serviceManager = new ServiceManager(newHashSet(new VertxService(newArrayList(CollectionRestServer.class), vertxOptions, deploymentOptions)));

@@ -63,7 +63,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>fluent-hc</artifactId>
 		</dependency>
-	
+
 		<!-- Vert.x open-source event-driven application framework and toolkit that runs on the JVM -->		
 		<dependency>
 			<groupId>io.vertx</groupId>
@@ -87,7 +87,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<!-- JUnit test -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>				
+				<artifactId>maven-surefire-plugin</artifactId>
 			</plugin>
 			<!-- Integration test -->
 			<plugin>

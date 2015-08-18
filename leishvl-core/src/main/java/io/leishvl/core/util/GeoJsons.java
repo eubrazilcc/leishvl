@@ -22,15 +22,14 @@
 
 package io.leishvl.core.util;
 
+import static com.google.common.base.Preconditions.checkState;
 import static io.leishvl.core.geospatial.Wgs84Validator.WGS84_URN_CRS;
 
+import java.util.List;
 import java.util.Map;
 
-import org.geojson.Crs;
-import org.geojson.Feature;
-import org.geojson.FeatureCollection;
-import org.geojson.GeoJsonObject;
-import org.geojson.LngLatAlt;
+import org.geojson.*;
+import static com.google.common.collect.Lists.newArrayList;
 
 /**
  * Utilities to work with GeoJSON objects.
@@ -53,6 +52,12 @@ public final class GeoJsons {
 	public static FeatureBuilder featureBuilder() {
 		return new FeatureBuilder();
 	}
+
+    public static LngLatAltBuilder lngLatAltBuilder() { return new LngLatAltBuilder(); }
+
+	public static PointBuilder pointBuilder() { return new PointBuilder(); }
+
+    public static PolygonBuilder polygonBuilder() { return new PolygonBuilder(); }
 
 	/* Inner classes */
 	
@@ -85,5 +90,94 @@ public final class GeoJsons {
 		}
 
 	}
+
+    public static class LngLatAltBuilder {
+
+        private LngLatAlt instance = new LngLatAlt();
+
+        public LngLatAltBuilder coordinates(final double longitude, final double latitude) {
+            return longitude(longitude).latitude(latitude);
+        }
+
+        public LngLatAltBuilder coordinates(final double longitude, final double latitude, final double altitude) {
+            return longitude(longitude).latitude(latitude).altitude(altitude);
+        }
+
+        public LngLatAltBuilder longitude(final double longitude) {
+            instance.setLongitude(longitude);
+            return this;
+        }
+
+        public LngLatAltBuilder latitude(final double latitude) {
+            instance.setLatitude(latitude);
+            return this;
+        }
+
+        public LngLatAltBuilder altitude(final double altitude) {
+            instance.setAltitude(altitude);
+            return this;
+        }
+
+        public LngLatAlt build() {
+            return instance;
+        }
+
+    }
+
+	public static class PointBuilder {
+
+        private Point instance = new Point();
+
+        public PointBuilder crs(final Crs crs) {
+            instance.setCrs(crs);
+            return this;
+        }
+
+        public PointBuilder coordinates(final LngLatAlt coordinates) {
+            instance.setCoordinates(coordinates);
+            return this;
+        }
+
+        public Point build() {
+            checkState(instance.getCoordinates() != null, "Coordinates expected.");
+            return instance;
+        }
+
+    }
+
+    public static class PolygonBuilder {
+
+        private Polygon instance = new Polygon();
+
+        public PolygonBuilder exteriorRing(final LngLatAlt... coordinates) {
+            return exteriorRing(newArrayList(coordinates));
+        }
+
+        public PolygonBuilder exteriorRing(final List<LngLatAlt> coordinates) {
+            instance.getCoordinates().add(0, coordinates);
+            return this;
+        }
+
+        public PolygonBuilder interiorRing(final LngLatAlt... coordinates) {
+            return interiorRing(newArrayList(coordinates));
+        }
+
+        public PolygonBuilder interiorRing(final List<LngLatAlt> coordinates) {
+            checkState(coordinates != null && !coordinates.isEmpty(), "No exterior ring defined.");
+            instance.getCoordinates().add(coordinates);
+            return this;
+        }
+
+        public Polygon build() {
+            final List<List<LngLatAlt>> coordinates = instance.getCoordinates();
+            checkState(coordinates != null && !coordinates.isEmpty(), "No exterior ring defined.");
+            final List<LngLatAlt> exteriorRing = coordinates.get(0);
+            checkState(exteriorRing.size() >= 4, "Exterior ring needs at least four coordinate pairs.");
+            checkState(exteriorRing.get(0).equals(exteriorRing.get(exteriorRing.size() - 1)),
+                    "The same position must be specified as the first and last coordinates.");
+            return instance;
+        }
+
+    }
 
 }

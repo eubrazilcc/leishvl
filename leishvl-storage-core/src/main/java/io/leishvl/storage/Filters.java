@@ -77,7 +77,7 @@ public class Filters {
 
 	/* Inner classes */
 
-	public static enum LogicalType {
+	public enum LogicalType {
 		LOGICAL_AND,
 		LOGICAL_OR
 	}

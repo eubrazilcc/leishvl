@@ -27,7 +27,6 @@ import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
 import static org.junit.Assert.fail;
 
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
@@ -70,23 +69,19 @@ public class DummyTest {
 		// create deployment options
 		final Map<String, Object> verticleConfig = ImmutableMap.<String, Object>builder()
 				.put("db_name", appConfig.getString("leishvl.database.prefix") + "_collection")
-				.put("hosts", appConfig.getConfigList("leishvl.database.hosts").stream().map(new Function<Config, JsonObject>() {
-					@Override
-					public JsonObject apply(final Config input) {
-						return new JsonObject().put("host", input.getString("host"))
-								.put("port", input.getInt("port"));
-					}
-				}).filter(host -> host != null).collect(Collectors.toList()))
+				.put("hosts", appConfig.getConfigList("leishvl.database.hosts").stream().map(input ->
+								new JsonObject().put("host", input.getString("host")).put("port", input.getInt("port"))
+				).filter(host -> host != null).collect(Collectors.toList()))
 				.put("replica_set", appConfig.getString("leishvl.database.replica-set"))
 				.put("user", appConfig.getString("leishvl.database.security.user"))
 				.put("pwd", appConfig.getString("leishvl.database.security.pwd"))
 				.build();
-		final DeploymentOptions deploymentOptions = new DeploymentOptions()				
+		final DeploymentOptions deploymentOptions = new DeploymentOptions()
 				.setConfig(new JsonObject(verticleConfig));
 		// deploy verticle
 		vertx = Vertx.vertx();
 		verticle = new TestVerticle();
-		vertx.deployVerticle(verticle, deploymentOptions,testCtxt.asyncAssertSuccess(deploymentID -> {
+		vertx.deployVerticle(verticle, deploymentOptions, testCtxt.asyncAssertSuccess(deploymentID -> {
 			this.deploymentID = deploymentID;
 			System.out.println(" >> New verticle deployed: " + this.deploymentID);
 		}));
@@ -103,7 +98,7 @@ public class DummyTest {
 		try {
 			// test open a database connection
 			verticle.openConnection();
-			testCtxt.assertNotNull(verticle.getMongoConnector(), "mongoDB connector is not null");			
+			testCtxt.assertNotNull(verticle.getMongoConnector(), "mongoDB connector is not null");
 
 			// test create index
 			verticle.getMongoConnector().createIndexes("test_col", newArrayList(new IndexModel(new Document("field", 1))), testCtxt.asyncAssertSuccess(ids -> {
@@ -119,7 +114,7 @@ public class DummyTest {
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
 			fail("DummyTest.test1() failed: " + e.getMessage());
-		} finally {			
+		} finally {
 			System.out.println("DummyTest.test1() has finished");
 		}
 	}
@@ -137,7 +132,7 @@ public class DummyTest {
 		}
 
 		public void openConnection() {
-			conn = createShared(vertx, context.config());			
+			conn = createShared(vertx, context.config());
 		}
 
 		@Override

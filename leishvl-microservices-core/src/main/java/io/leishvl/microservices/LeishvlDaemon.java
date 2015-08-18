@@ -22,37 +22,29 @@
 
 package io.leishvl.microservices;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.typesafe.config.ConfigRenderOptions.concise;
-import static io.leishvl.core.LogManager.LOG_MANAGER;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.slf4j.LoggerFactory.getLogger;
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.common.util.concurrent.ServiceManager.Listener;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigParseOptions;
+import org.apache.commons.cli.*;
+import org.apache.commons.daemon.Daemon;
+import org.apache.commons.daemon.DaemonContext;
+import org.slf4j.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import javax.annotation.Nullable;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.daemon.Daemon;
-import org.apache.commons.daemon.DaemonContext;
-import org.apache.commons.daemon.DaemonInitException;
-import org.slf4j.Logger;
-
-import com.google.common.util.concurrent.ServiceManager;
-import com.google.common.util.concurrent.ServiceManager.Listener;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
-import com.typesafe.config.ConfigParseOptions;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.typesafe.config.ConfigRenderOptions.concise;
+import static io.leishvl.core.LogManager.LOG_MANAGER;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Tools for starting applications.
@@ -77,7 +69,7 @@ public abstract class LeishvlDaemon implements Daemon {
 	}
 
 	@Override
-	public void init(final DaemonContext daemonContext) throws DaemonInitException, Exception {
+	public void init(final DaemonContext daemonContext) throws Exception {
 		// start daemon thread
 		daemonThread = new Thread() {	
 			@Override
@@ -173,7 +165,7 @@ public abstract class LeishvlDaemon implements Daemon {
 	}
 
 	private Config loadConfig(final @Nullable String confname) {
-		Config config = null;
+		Config config;
 		final String confname2 = trimToNull(confname);
 		if (confname2 != null) {
 			final ConfigParseOptions options = ConfigParseOptions.defaults().setAllowMissing(false);
