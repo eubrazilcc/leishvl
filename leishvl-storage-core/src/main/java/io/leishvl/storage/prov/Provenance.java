@@ -67,7 +67,7 @@ public enum Provenance {
 	private final ProvFactory provFactory = newXMLProvFactory();
 	private final Namespace ns = new Namespace();
 
-	private Provenance() {
+	Provenance() {
 		ns.addKnownNamespaces();
 		ns.register(LVL_PREFIX, LVL_NS);
 		ns.register(SOV_PREFIX, SOV_NS);		
@@ -172,11 +172,10 @@ public enum Provenance {
 
 	public Agent lvlAgent() {
 		final QualifiedName qn = PROVENANCE.qn(LEISHVL);
-		final Agent agent = PROVENANCE.factory().newAgent(qn, asList(new Attribute[] { 
+		return PROVENANCE.factory().newAgent(qn, asList(new Attribute[] {
 				type(LVL_PREFIX, LEISHVL),
 				revisionAttr("0.3.0")
 		}));
-		return agent;
 	}
 
 	public Agent organizationAgent(final String name) {

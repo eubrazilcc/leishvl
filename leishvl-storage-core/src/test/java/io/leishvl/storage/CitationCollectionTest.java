@@ -23,6 +23,7 @@
 package io.leishvl.storage;
 
 import com.google.common.collect.ImmutableMap;
+import static com.google.common.collect.Maps.newHashMap;
 import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -30,6 +31,9 @@ import io.leishvl.core.xml.ncbi.pubmed.PubmedArticle;
 import io.leishvl.storage.mongodb.MongoConnector;
 import io.leishvl.storage.security.User;
 import io.vertx.core.*;
+import io.vertx.core.eventbus.DeliveryOptions;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.impl.Closeable;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -60,6 +64,7 @@ import static io.leishvl.core.xml.PubMedXmlBinder.PUBMED_XMLB;
 import io.leishvl.storage.base.ObjectState;
 import static io.leishvl.storage.base.ObjectState.DRAFT;
 import static io.leishvl.storage.base.ObjectState.RELEASE;
+import static io.vertx.core.Future.succeededFuture;
 import static org.junit.Assert.fail;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -89,6 +94,7 @@ public class CitationCollectionTest {
     public static final String ID_1 = "CITATION_1";
 
     private Vertx vertx;
+    private JsonObject dbConfig;
     private TestVerticle verticle;
     private String deploymentID;
 
@@ -106,8 +112,8 @@ public class CitationCollectionTest {
                 .put("user", appConfig.getString("leishvl.database.security.user"))
                 .put("pwd", appConfig.getString("leishvl.database.security.pwd"))
                 .build();
-        final DeploymentOptions deploymentOptions = new DeploymentOptions()
-                .setConfig(new JsonObject(verticleConfig));
+        dbConfig = new JsonObject(verticleConfig);
+        final DeploymentOptions deploymentOptions = new DeploymentOptions().setConfig(dbConfig);
         // deploy verticle
         vertx = Vertx.vertx();
         verticle = new TestVerticle();
@@ -118,73 +124,103 @@ public class CitationCollectionTest {
     }
 
     @After
-    public void after(final TestContext testCtxt) {
-        vertx.close(testCtxt.asyncAssertSuccess());
+    public void after(final TestContext context) {
+        vertx.close(context.asyncAssertSuccess());
+    }
+
+    @Test
+    public void test(final TestContext context) {
+        System.out.println("CitationCollectionTest.test()");
+        try {
+            // create test data-set
+            final TestDataset ds = new TestDataset(true);
+            verticle.setDs(ds);
+            // uncomment for additional output
+            System.out.println(" >> New test data-set created");
+
+            // insert a new citation in the database
+            final EventBus eb = vertx.eventBus();
+            eb.send("insert.citation0", "insert citation0", ar -> {
+                context.assertTrue(ar.succeeded(), "Citation0 was inserted into the database");
+                System.out.println(" >> Received reply: " + ar.result().body());
+                assertThat("inserted Id is not empty", trim(ds.citation0.getDbId()), allOf(notNullValue(), not(equalTo(""))));
+                assertThat("inserted version is empty", isBlank(ds.citation0.getVersion()), equalTo(true));
+                assertThat("last modified field is not null", ds.citation0.getLastModified(), notNullValue());
+                // uncomment for additional output
+                System.out.println(" >> Inserted citation (" + ds.citation0.getDbId() + "):\n" + ds.citation0.toJson(JSON_PRETTY_PRINTER));
+            });
+
+            // find citation by global id
+            eb.send("fetch.citation0", "fetch citation0", ar -> {
+                context.assertTrue(ar.succeeded(), "Citation0 was fetched from the database");
+                System.out.println(" >> Received reply: " + ar.result().body());
+                assertThat("fetched citation coincides with expected", ds.citation2, equalTo(ds.citation0));
+                // uncomment for additional output
+                System.out.println(" >> Fetched citation (" + ds.citation2.getDbId() + "):\n" + ds.citation2.toJson(JSON_PRETTY_PRINTER));
+            });
+
+
+            // TODO
+            Thread.sleep(10000l);
+            // TODO
+
+            /*
+
+     // insert a second citation in the database
+     ds.citation1.save().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
+     assertThat("inserted Id is not empty", trim(ds.citation1.getDbId()), allOf(notNullValue(), not(equalTo(""))));
+     assertThat("inserted version is empty", isBlank(ds.citation1.getVersion()), equalTo(true));
+     assertThat("last modified field is not null", ds.citation1.getLastModified(), notNullValue());
+     // uncomment for additional output
+     System.out.println(" >> Inserted citation (" + ds.citation1.getDbId() + "):\n" + ds.citation1.toJson(JSON_PRETTY_PRINTER));
+
+             */
+
+
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+            fail("CitationCollectionTest.test() failed: " + e.getMessage());
+        } finally {
+            verticle.close(context.asyncAssertSuccess());
+            System.out.println("CitationCollectionTest.test() has finished");
+        }
     }
 
     /**
      * Tests creation, modification and search of objects which state is draft.
+     *
+     @Test
+     public void test01DraftState(final TestContext testCtxt) {
+     System.out.println("CitationCollectionTest.test01DraftState()");
+     try {
+
+     // TODO
+
+     // operate on the test data-set
+     final Resultset rs = new Resultset(new TestScenario[]{
+     new TestScenario("TestDraft", TestState.ALL, new ObjectState[] { DRAFT, DRAFT }),
+     new TestScenario("TestDraft", TestState.RELEASES, new ObjectState[] { DRAFT, DRAFT })
+     });
+     operateOnTestDatasets(ds, rs, true);
+
+     } catch (Exception e) {
+     e.printStackTrace(System.err);
+     fail("CitationCollectionTest.test01DraftState() failed: " + e.getMessage());
+     } finally {
+     try {
+     new Citations().drop().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
+     } catch (Exception ignore) { }
+     System.out.println("CitationCollectionTest.test01DraftState() has finished");
+     }
+     }
+
+     private void operateOnTestDatasets(final TestDataset ds, final Resultset rs, final boolean testUpdate) throws Exception {
+     // TODO
+     }
+
      */
-    @Test
-    public void test01DraftState(final TestContext testCtxt) {
-        System.out.println("CitationCollectionTest.test01DraftState()");
-        try {
-            // create test data
-            final TestDataset ds = new TestDataset(true);
 
-            // insert test data-set into the database
-            insertTestDatasets(ds);
-
-            // operate on the test data-set
-            final Resultset rs = new Resultset(new TestScenario[]{
-                    new TestScenario("TestDraft", TestState.ALL, new ObjectState[] { DRAFT, DRAFT }),
-                    new TestScenario("TestDraft", TestState.RELEASES, new ObjectState[] { DRAFT, DRAFT })
-            });
-            operateOnTestDatasets(ds, rs, true);
-
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
-            fail("CitationCollectionTest.test01DraftState() failed: " + e.getMessage());
-        } finally {
-            try {
-                new Citations().drop().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-            } catch (Exception ignore) { }
-            System.out.println("CitationCollectionTest.test01DraftState() has finished");
-        }
-    }
-
-    private void insertTestDatasets(final TestDataset ds) throws Exception {
-        // insert new citation in the database
-        ds.citation0.save().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-        assertThat("inserted Id is not empty", trim(ds.citation0.getDbId()), allOf(notNullValue(), not(equalTo(""))));
-        assertThat("inserted version is empty", isBlank(ds.citation0.getVersion()), equalTo(true));
-        assertThat("last modified field is not null", ds.citation0.getLastModified(), notNullValue());
-        // uncomment for additional output
-        System.out.println(" >> Inserted citation (" + ds.citation0.getDbId() + "):\n" + ds.citation0.toJson(JSON_PRETTY_PRINTER));
-
-        // find citation by global id
-        ds.citation2 = Citation.builder().lvlId(ID_0).build();
-        ds.citation2.fetch().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-        assertThat("fetched citation coincides with expected", ds.citation2, equalTo(ds.citation0));
-        // uncomment for additional output
-        System.out.println(" >> Fetched citation (" + ds.citation2.getDbId() + "):\n" + ds.citation2.toJson(JSON_PRETTY_PRINTER));
-
-        // insert a second citation in the database
-        ds.citation1.save().get(STO_OPERATION_TIMEOUT_SECS, SECONDS);
-        assertThat("inserted Id is not empty", trim(ds.citation1.getDbId()), allOf(notNullValue(), not(equalTo(""))));
-        assertThat("inserted version is empty", isBlank(ds.citation1.getVersion()), equalTo(true));
-        assertThat("last modified field is not null", ds.citation1.getLastModified(), notNullValue());
-        // uncomment for additional output
-        System.out.println(" >> Inserted citation (" + ds.citation1.getDbId() + "):\n" + ds.citation1.toJson(JSON_PRETTY_PRINTER));
-
-        System.out.println("CitationCollectionTest.insertTestDatasets() has finished");
-    }
-
-    private void operateOnTestDatasets(final TestDataset ds, final Resultset rs, final boolean testUpdate) throws Exception {
-        // TODO
-    }
-
-    private static class TestDataset {
+    private class TestDataset {
         // create users
         private final User user0 = User.builder().userid("user0").build();
         private final User user1 = User.builder().userid("user1").build();
@@ -216,25 +252,29 @@ public class CitationCollectionTest {
         // create citations
         private final String pmid0 = article0.getMedlineCitation().getPMID().getvalue();
         private final Citation citation0 = Citation.builder()
-                .lvlId(ID_0)
-                .lvl(LeishvlCitation.builder().cited(newArrayList("SEQ_0", "SEQ_1")).build())
+                .vertx(vertx)
+                .config(dbConfig)
+                .leishvlId(ID_0)
+                .leishvl(LeishvlCitation.builder().cited(newArrayList("SEQ_0", "SEQ_1")).build())
                 .pubmed(article0)
                 .location(bcnPoint)
                 .state(DRAFT)
-                .provenance(newObjectImportProv(newPubMedArticle("PMID|" + pmid0), "lvl|ci|ur|" + ID_0, newGeocoding(bcnPoint)))
-                .references(Maps.<String, List<String>>newHashMap(ImmutableMap.of("sequences", newArrayList("lvl|sf|gb|SEQ_0", "lvl|le|gb|SEQ_1"))))
+                .provenance(newObjectImportProv(newPubMedArticle("PMID-" + pmid0), "lvl-ci-ur-" + ID_0, newGeocoding(bcnPoint)))
+                .references(Maps.<String, List<String>>newHashMap(ImmutableMap.of("sequences", newArrayList("lvl-sf-gb-SEQ_0", "lvl-le-gb-SEQ_1"))))
                 .build();
 
         private final Citation citation1 = Citation.builder()
-                .lvlId(ID_1)
+                .vertx(vertx)
+                .config(dbConfig)
+                .leishvlId(ID_1)
                 .pubmed(article1)
                 .location(madPoint)
                 .build();
 
         private Citation citation2 = null;
-        private final Citations citations = new Citations();
+        private final Citations citations = new Citations(vertx, dbConfig);
 
-        private Map<String, Integer> versions = Maps.newHashMap(ImmutableMap.of(ID_0, 1, ID_1, 1));
+        private Map<String, Integer> versions = newHashMap(ImmutableMap.of(ID_0, 1, ID_1, 1));
 
         public TestDataset(final boolean verbose) throws IOException {
             if (verbose) {
@@ -308,13 +348,7 @@ public class CitationCollectionTest {
         }
 
         private int sum(final int[] stateCount) {
-            int sum = 0;
-            if (stateCount != null) {
-                for (int i = 0; i < stateCount.length; i++) {
-                    sum += stateCount[i];
-                }
-            }
-            return sum;
+            return stateCount != null ? Arrays.stream(stateCount).sum() : 0;
         }
 
         public String toString() {
@@ -332,21 +366,42 @@ public class CitationCollectionTest {
      * Test verticle.
      * @author Erik Torres <ertorser@upv.es>
      */
-    public static class TestVerticle extends AbstractVerticle implements Closeable {
+    public class TestVerticle extends AbstractVerticle implements Closeable {
 
-        private MongoConnector conn;
+        private TestDataset ds;
 
-        public MongoConnector getMongoConnector() {
-            return conn;
+        public void setDs(final TestDataset ds) {
+            this.ds = ds;
         }
 
-        public void openConnection() {
-            conn = createShared(vertx, context.config());
+        @Override
+        public void start() throws Exception {
+            final EventBus eb = vertx.eventBus();
+            eb.consumer("insert.citation0", message -> {
+                System.out.println(" >> Message received: " + message.body());
+                ds.citation0.save(lookup -> {
+                    if (lookup.succeeded()) {
+                        message.reply("Citation0 inserted");
+                        System.out.println(" >> Sent back response to caller");
+                    } else message.fail(1, lookup.cause().getMessage());
+                });
+            });
+            eb.consumer("fetch.citation0", message -> {
+                System.out.println(" >> Message received: " + message.body());
+                ds.citation2 = Citation.builder().vertx(vertx).config(config()).leishvlId(ID_0).build();
+                ds.citation2.fetch(lookup -> {
+                    if (lookup.succeeded()) {
+                        message.reply("Citation0 found");
+                        System.out.println(" >> Sent back response to caller");
+                    } else message.fail(1, lookup.cause().getMessage());
+                });
+            });
+            System.out.println("TestVerticle started");
         }
 
         @Override
         public void close(final Handler<AsyncResult<Void>> completionHandler) {
-            conn.close(completionHandler);
+            vertx.runOnContext(v -> completionHandler.handle(succeededFuture(null)));
         }
 
     }

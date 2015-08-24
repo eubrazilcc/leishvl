@@ -39,7 +39,7 @@ import io.leishvl.test.suite.LeishvlTestSuite;
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(Suite.class)
-@SuiteClasses({ DummyTest.class })
+@SuiteClasses({ BaseOperationsTest.class, CitationCollectionTest.class })
 public class AllIntegrationTests {
 
 	@BeforeClass

@@ -33,6 +33,9 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	</appender>
 
 	<logger name="io.leishvl" level="TRACE" />
+    <logger name="org.mongodb.driver" level="WARN" />
+    <logger name="org.mongodb.driver.connection" level="WARN" />
+	<logger name="org.mongodb.driver.cluster" level="WARN" />
 
 	<root level="INFO">
 		<appender-ref ref="STDOUT" />

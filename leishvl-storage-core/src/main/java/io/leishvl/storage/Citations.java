@@ -22,16 +22,15 @@
 
 package io.leishvl.storage;
 
-import static com.google.common.collect.Maps.newHashMap;
-import static org.slf4j.LoggerFactory.getLogger;
-
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.leishvl.storage.base.LeishvlCollection;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
+import java.util.Map;
+
+import static com.google.common.collect.Maps.newHashMap;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Wraps a collection of {@link Citation}.
@@ -46,14 +45,14 @@ public class Citations extends LeishvlCollection<Citation> {
 		super(vertx, config, Citation.COLLECTION, Citation.class, Citation.CONFIGURER, getLogger(Citations.class));
 	}
 
-	@Override	
+	@Override
 	public Map<String, Link> getLinks() {
 		return links;
 	}
 
 	@Override
 	public void setLinks(final Map<String, Link> links) {
-		this.links = (links != null ? newHashMap(links) : null);		
+		this.links = (links != null ? newHashMap(links) : null);
 	}
 
 }

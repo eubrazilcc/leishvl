@@ -56,7 +56,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(VertxUnitRunner.class)
-public class DummyTest {
+public class BaseOperationsTest {
 
 	private Vertx vertx;
 	private TestVerticle verticle;
@@ -94,7 +94,7 @@ public class DummyTest {
 
 	@Test
 	public void test1(final TestContext testCtxt) {
-		System.out.println("DummyTest.test1()");
+		System.out.println("BaseOperationsTest.test1()");
 		try {
 			// test open a database connection
 			verticle.openConnection();
@@ -113,9 +113,9 @@ public class DummyTest {
 
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
-			fail("DummyTest.test1() failed: " + e.getMessage());
+			fail("BaseOperationsTest.test1() failed: " + e.getMessage());
 		} finally {
-			System.out.println("DummyTest.test1() has finished");
+			System.out.println("BaseOperationsTest.test1() has finished");
 		}
 	}
 

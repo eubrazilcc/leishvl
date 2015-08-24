@@ -22,25 +22,22 @@
 
 package io.leishvl.storage.base;
 
-import static io.leishvl.storage.base.DeleteOptions.DELETE_ACTIVE;
-import static io.leishvl.storage.base.DeleteOptions.DELETE_ALL;
-import static io.leishvl.storage.base.DeleteOptions.ON_DELETE_CASCADE;
-import static io.leishvl.storage.base.DeleteOptions.ON_DELETE_NO_ACTION;
-import static io.leishvl.storage.base.LeishvlObject.copyProperties;
-import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
-import static java.util.Arrays.asList;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
-import java.util.List;
-
 import io.leishvl.storage.security.User;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.List;
+
+import static io.leishvl.storage.base.DeleteOptions.*;
+import static io.leishvl.storage.base.LeishvlObject.copyProperties;
+import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
+import static io.vertx.core.Future.failedFuture;
+import static io.vertx.core.Future.succeededFuture;
+import static java.util.Arrays.asList;
 
 /**
  * Provides different behaviors for different object states.
@@ -48,43 +45,45 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class ObjectStateHandler<T extends LeishvlObject> {
 
-	protected final Vertx vertx;
-	protected final JsonObject config;
+    protected Vertx vertx;
+    protected JsonObject config;
 
-	public ObjectStateHandler(final Vertx vertx, final JsonObject config) {
-		this.vertx = vertx;
-		this.config = config;
-	}
+    public ObjectStateHandler setVertx(final Vertx vertx) {
+        this.vertx = vertx;
+        return this;
+    }
 
-	public abstract void save(T obj, User user, Handler<AsyncResult<Void>> resultHandler, SaveOptions... options);
+    public ObjectStateHandler setConfig(final JsonObject config) {
+        this.config = config;
+        return this;
+    }
 
-	public void fetch(final T obj, final Handler<AsyncResult<Void>> resultHandler, final FetchOptions... options) {
-		final LeishvlObject __obj = obj;
-		createShared(vertx, config).findActive(obj, obj.getClass(), new Handler<AsyncResult<LeishvlObject>>() {
-			@Override
-			public void handle(final AsyncResult<LeishvlObject> event) {
-				if (event.succeeded()) {				
-					try {
-						copyProperties(event.result(), __obj);						
-						resultHandler.handle(succeededFuture());						
-					} catch (IllegalAccessException | InvocationTargetException e) {
-						resultHandler.handle(failedFuture(e));
-					}
-				} else {
-					resultHandler.handle(failedFuture(event.cause()));	
-				}
-			}
-		});
-	}
+    public abstract void save(T obj, User user, Handler<AsyncResult<Void>> resultHandler, SaveOptions... options);
 
-	public void delete(final T obj, final Handler<AsyncResult<Boolean>> resultHandler, final DeleteOptions... options) {
-		final List<DeleteOptions> optList = (options != null ? asList(options) : Collections.<DeleteOptions>emptyList());
-		createShared(vertx, config).delete(obj, !optList.contains(DELETE_ACTIVE) && optList.contains(DELETE_ALL), 
-				!optList.contains(ON_DELETE_NO_ACTION) && optList.contains(ON_DELETE_CASCADE), resultHandler);
-	}
+    public void fetch(final T obj, final Handler<AsyncResult<Void>> resultHandler, final FetchOptions... options) {
+        final LeishvlObject __obj = obj;
+        createShared(vertx, config).findActive(obj, obj.getClass(), event -> {
+            if (event.succeeded()) {
+                try {
+                    copyProperties(event.result(), __obj);
+                    resultHandler.handle(succeededFuture());
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    resultHandler.handle(failedFuture(e));
+                }
+            } else {
+                resultHandler.handle(failedFuture(event.cause()));
+            }
+        });
+    }
 
-	public void versions(final T obj, final Handler<AsyncResult<List<LeishvlObject>>> resultHandler) {
-		createShared(vertx, config).findVersions(obj, obj.getClass(), resultHandler);
-	}
+    public void delete(final T obj, final Handler<AsyncResult<Boolean>> resultHandler, final DeleteOptions... options) {
+        final List<DeleteOptions> optList = (options != null ? asList(options) : Collections.<DeleteOptions>emptyList());
+        createShared(vertx, config).delete(obj, !optList.contains(DELETE_ACTIVE) && optList.contains(DELETE_ALL),
+                !optList.contains(ON_DELETE_NO_ACTION) && optList.contains(ON_DELETE_CASCADE), resultHandler);
+    }
+
+    public void versions(final T obj, final Handler<AsyncResult<List<LeishvlObject>>> resultHandler) {
+        createShared(vertx, config).findVersions(obj, obj.getClass(), resultHandler);
+    }
 
 }

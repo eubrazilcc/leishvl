@@ -31,7 +31,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.DeserializationProblemHandler;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableMap;
-import com.mongodb.MongoException;
 import com.mongodb.async.SingleResultCallback;
 import com.mongodb.async.client.*;
 import com.mongodb.client.model.CountOptions;
@@ -52,6 +51,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.shareddata.LocalMap;
 import io.vertx.core.shareddata.Shareable;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableLong;
 import org.bson.*;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -67,7 +67,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -87,8 +86,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
-import static java.util.concurrent.CompletableFuture.allOf;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.apache.commons.beanutils.PropertyUtils.getSimpleProperty;
 import static org.apache.commons.lang3.StringUtils.*;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -147,7 +144,7 @@ public class MongoConnector {
      * @param allowedTransitions - transitions between states
      */
     public <T extends LeishvlObject> void saveActive(final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
-        save(null, obj, wrapCallback2(resultHandler), allowedTransitions);
+        save(null, obj, resultHandler, allowedTransitions);
     }
 
     /**
@@ -161,15 +158,12 @@ public class MongoConnector {
     public <T extends LeishvlObject> void saveAsVersion(final String version, final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
         checkArgument(isNotBlank(version), "New object version cannot be empty");
         // insert the object in the collection as a new version
-        final CompletableFuture<Void> insertFuture = new CompletableFuture<>();
-        save(version, obj, insertFuture, allowedTransitions);
-        // set the new active version to the latest modified record
-        insertFuture.whenCompleteAsync((inserResult, error) -> {
-            final CompletableFuture<Document> activeFuture = convertCallback2(resultHandler, (document) -> null);
-            if (error == null) {
-                activateLastModified(getCollection(obj), obj.getLeishvlId(), activeFuture);
-                activeFuture.whenCompleteAsync((activeDoc, error2) -> {
-                    if (error2 == null) {
+        save(version, obj, insertResult -> {
+            // set the new active version to the latest modified record
+            if (insertResult.succeeded()) {
+                vertx.runOnContext(v -> activateLastModified(getCollection(obj), obj.getLeishvlId(), activateResult -> {
+                    if (activateResult.succeeded()) {
+                        final Document activeDoc = activateResult.result();
                         if (activeDoc != null) {
                             final String activeVersion = activeDoc.getString(LEISHVL_VERSION_FIELD);
                             final String thisVersion = obj.getVersion();
@@ -177,13 +171,13 @@ public class MongoConnector {
                                 LOGGER.info("The later modification '" + activeVersion + "' is the new active version instead of this '" + thisVersion
                                         + "' [collection= " + obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "].");
                             }
-                            activeFuture.complete(activeDoc);
+                            resultHandler.handle(succeededFuture());
                         } else
-                            activeFuture.completeExceptionally(new LeishvlObjectWriteException("No record was selected as the new active version."));
-                    } else activeFuture.completeExceptionally(error2);
-                });
-            } else activeFuture.completeExceptionally(error);
-        });
+                            resultHandler.handle(failedFuture(new LeishvlObjectWriteException("No record was selected as the new active version.")));
+                    } else resultHandler.handle(failedFuture(activateResult.cause()));
+                }));
+            } else resultHandler.handle(failedFuture(insertResult.cause()));
+        }, allowedTransitions);
     }
 
     /**
@@ -194,11 +188,11 @@ public class MongoConnector {
      * {@link #matchActive(LeishvlObject)} is preferred which includes a search on the alternative index.</p>
      * @param version - set to a value different to <tt>null</tt> to override the active version of the object
      * @param obj - object to save
-     * @param future - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
+     * @param resultHandler - a handler which result indicates that the operation is successfully completed, or an exception when the method fails
      * @param allowedTransitions - transitions between states
      */
-    private <T extends LeishvlObject> void save(final @Nullable String version, final T obj, final CompletableFuture<Void> future, final String... allowedTransitions) {
-        requireNonNull(future, "Future expected.");
+    private <T extends LeishvlObject> void save(final @Nullable String version, final T obj, final Handler<AsyncResult<Void>> resultHandler, final String... allowedTransitions) {
+        requireNonNull(resultHandler, "Result handler expected.");
         final MongoCollection<Document> dbcol = getCollection(obj);
         final String version2 = trimToNull(version);
         final boolean overrideActive = (version2 == null);
@@ -213,46 +207,39 @@ public class MongoConnector {
                 .returnDocument(AFTER)
                 .upsert(true);
         // execute the operation in the database
-        dbcol.findOneAndUpdate(filter, update, options, (result, error) -> {
-            if (error == null) {
-                if (result != null) {
-                    obj.setDbId(result.get("_id", ObjectId.class).toHexString());
-                    obj.setVersion(result.getString(LEISHVL_VERSION_FIELD));
-                    obj.setLastModified(result.getDate(LEISHVL_LAST_MODIFIED_FIELD));
-                    future.complete(null);
-                } else
-                    future.completeExceptionally(new LeishvlObjectWriteException("No new records were inserted, no existing records were modified by the operation."));
-            } else if (error instanceof MongoException && error.getMessage().matches("(?i:.*Cannot update \'version\'.*)")) {
-                future.completeExceptionally(new UnsupportedOperationException("Cannot make a transition between invalid states.", error));
-            } else future.completeExceptionally(error);
-        });
+        dbcol.findOneAndUpdate(filter, update, options, convertCallback(resultHandler, result -> {
+            if (result != null) {
+                obj.setDbId(result.get("_id", ObjectId.class).toHexString());
+                obj.setVersion(result.getString(LEISHVL_VERSION_FIELD));
+                obj.setLastModified(result.getDate(LEISHVL_LAST_MODIFIED_FIELD));
+            } else
+                throw new LeishvlObjectWriteException("No new records were inserted, no existing records were modified by the operation.");
+            return null;
+        }));
     }
 
-    private void activateLastModified(final MongoCollection<Document> dbcol, final String lvlId, final CompletableFuture<Document> future) {
-        // found and deactivate all versions of the specified object in the database
-        final CompletableFuture<Void> deactivateFuture = new CompletableFuture<>();
+    private void activateLastModified(final MongoCollection<Document> dbcol, final String lvlId, final Handler<AsyncResult<Document>> resultHandler) {
+        // find and deactivate all versions of the specified object in the database
         final BsonDocument update = new BsonDocument("$unset", new BsonDocument(newArrayList(
                 new BsonElement(LEISHVL_SPARSE_IS_ACTIVE_FIELD, new BsonString("")),
                 new BsonElement(LEISHVL_DENSE_IS_ACTIVE_FIELD, new BsonString("")))));
         final UpdateOptions options = new UpdateOptions().upsert(false);
         dbcol.updateMany(matchGuid(lvlId), update, options, (result, error) -> {
-            if (error == null) deactivateFuture.complete(null);
-            else deactivateFuture.completeExceptionally(error);
-        });
-        // set the new active version
-        deactivateFuture.whenCompleteAsync((result, error) -> {
+            // set the new active version
             if (error == null) {
-                final BsonDocument update2 = new BsonDocument("$set", new BsonDocument(newArrayList(
-                        new BsonElement(LEISHVL_SPARSE_IS_ACTIVE_FIELD, new BsonString(lvlId)),
-                        new BsonElement(LEISHVL_DENSE_IS_ACTIVE_FIELD, new BsonString(lvlId)))));
-                final FindOneAndUpdateOptions options2 = new FindOneAndUpdateOptions().sort(orderBy(descending(LEISHVL_LAST_MODIFIED_FIELD)))
-                        .returnDocument(AFTER)
-                        .upsert(false);
-                dbcol.findOneAndUpdate(matchGuid(lvlId), update2, options2, (document, error2) -> {
-                    if (error2 == null) future.complete(document);
-                    else future.completeExceptionally(error2);
+                vertx.runOnContext(v -> {
+                    final BsonDocument update2 = new BsonDocument("$set", new BsonDocument(newArrayList(
+                            new BsonElement(LEISHVL_SPARSE_IS_ACTIVE_FIELD, new BsonString(lvlId)),
+                            new BsonElement(LEISHVL_DENSE_IS_ACTIVE_FIELD, new BsonString(lvlId)))));
+                    final FindOneAndUpdateOptions options2 = new FindOneAndUpdateOptions().sort(orderBy(descending(LEISHVL_LAST_MODIFIED_FIELD)))
+                            .returnDocument(AFTER)
+                            .upsert(false);
+                    dbcol.findOneAndUpdate(matchGuid(lvlId), update2, options2, (document, error2) -> {
+                        if (error2 == null) resultHandler.handle(succeededFuture(document));
+                        else resultHandler.handle(failedFuture(error2));
+                    });
                 });
-            } else future.completeExceptionally(error);
+            } else resultHandler.handle(failedFuture(error));
         });
     }
 
@@ -269,15 +256,15 @@ public class MongoConnector {
         final MongoCollection<Document> dbcol = getCollection(obj);
         dbcol.find(matchActive(obj)).modifiers(new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT)).sort(LAST_MODIFIED_SORT_DESC).first(convertCallback(resultHandler, new Function<Document, LeishvlObject>() {
             @Override
-            public LeishvlObject apply(final Document result) {
-                LeishvlObject obj;
-                try {
-                    if (result == null) throw new LeishvlObjectNotFoundException("Object not found");
-                    obj = parseDocument(result, type);
-                } catch (Exception e) {
-                    throw new IllegalStateException("Failed to parse result document.", e);
+            public LeishvlObject apply(final Document result) { // TODO
+                if (result == null) throw new LeishvlObjectNotFoundException("Object not found.");
+                else {
+                    try {
+                        return parseDocument(result, type);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Failed to parse result document.", e);
+                    }
                 }
-                return obj;
             }
         }));
     }
@@ -292,7 +279,7 @@ public class MongoConnector {
                                                      final @Nullable Map<String, Boolean> projections, final @Nullable MutableLong totalCount,
                                                      final @Nullable List<String> excludedStates, final Handler<AsyncResult<List<T>>> resultHandler) {
         // parse input parameters
-        boolean isText = false;
+        final MutableBoolean isText = new MutableBoolean(false);
         final List<Bson> filterFields = newArrayList();
         if (filters != null && filters.getFilters() != null) {
             for (final Filter filter : filters.getFilters()) {
@@ -305,7 +292,7 @@ public class MongoConnector {
                         break;
                     case FILTER_TEXT:
                         filterFields.add(text(value));
-                        isText = true;
+                        isText.setTrue();
                         break;
                     case FILTER_COMPARE:
                     default:
@@ -328,7 +315,7 @@ public class MongoConnector {
                 }
             }
         }
-        final List<Bson> filterList = newArrayList(not(new BsonDocument(!isText ? LEISHVL_SPARSE_IS_ACTIVE_FIELD : LEISHVL_DENSE_IS_ACTIVE_FIELD, BsonNull.VALUE)));
+        final List<Bson> filterList = newArrayList(not(new BsonDocument(isText.isFalse() ? LEISHVL_SPARSE_IS_ACTIVE_FIELD : LEISHVL_DENSE_IS_ACTIVE_FIELD, BsonNull.VALUE)));
         if (excludedStates != null && !excludedStates.isEmpty()) filterList.add(not(matchStates(excludedStates)));
         if (!filterFields.isEmpty()) filterList.add(LOGICAL_AND.equals(ofNullable(filters).orElse(Filters.builder().build()).getType()) ? and(filterFields) : or(filterFields));
         final List<Bson> projectionFields = projections != null
@@ -340,37 +327,35 @@ public class MongoConnector {
         // prepare to operate on the collection
         final MongoCollection<Document> dbcol = getCollection(collection);
         final List<T> page = newArrayList();
-        final MutableLong __totalCount = new MutableLong(0l);
         // get total number of records
-        final CompletableFuture<Long> countFuture = new CompletableFuture<>();
-        totalCount(dbcol, true, excludedStates, countFuture);
-        countFuture.thenAcceptAsync(__totalCount::setValue);
-        // find records and populate the page
-        final CompletableFuture<Void> findFuture = new CompletableFuture<>();
-        final FindIterable<Document> iterable = dbcol
-                .find(and(filterList))
-                .modifiers(!isText ? new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT) : new BsonDocument())
-                .projection(fields(projectionFields))
-                .sort(orderBy(sortFields))
-                .skip(start)
-                .limit(size);
-        iterable.forEach((doc) -> {
-            try {
-                page.add(parseDocument(doc, type));
-            } catch (Exception e) {
-                LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='"
-                        + doc.get("_id", ObjectId.class).toHexString() + "']", e);
-            }
-        }, (result, error) -> {
-            if (error == null) findFuture.complete(null);
-            else findFuture.completeExceptionally(error);
+        totalCount(dbcol, true, excludedStates, countResult -> {
+            if (countResult.succeeded()) {
+                if (totalCount != null) totalCount.setValue(countResult.result());
+                // find records and populate the page
+                if (ofNullable(countResult.result()).orElse(0l) > 0l) {
+                    vertx.runOnContext(v -> {
+                        final FindIterable<Document> iterable = dbcol
+                                .find(and(filterList))
+                                .modifiers(isText.isFalse() ? new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT) : new BsonDocument())
+                                .projection(fields(projectionFields))
+                                .sort(orderBy(sortFields))
+                                .skip(start)
+                                .limit(size);
+                        iterable.forEach((doc) -> {
+                            try {
+                                page.add(parseDocument(doc, type));
+                            } catch (Exception e) {
+                                LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='"
+                                        + doc.get("_id", ObjectId.class).toHexString() + "']", e);
+                            }
+                        }, (findResult, findError) -> {
+                            if (findError == null) resultHandler.handle(succeededFuture(page));
+                            else resultHandler.handle(failedFuture(findError));
+                        });
+                    });
+                } else resultHandler.handle(succeededFuture(page));
+            } else resultHandler.handle(failedFuture(countResult.cause()));
         });
-        // combine the results
-        allOf(countFuture, findFuture).whenCompleteAsync((result, error) ->
-                vertx.runOnContext(v -> {
-                    if (error == null && totalCount != null) totalCount.setValue(__totalCount.getValue());
-                    resultHandler.handle(error == null ? succeededFuture(page) : failedFuture(error));
-                }));
     }
 
     public <T extends LeishvlObject> void findVersions(final LeishvlObject obj, final Class<T> type, final Handler<AsyncResult<List<LeishvlObject>>> resultHandler) {
@@ -389,75 +374,63 @@ public class MongoConnector {
         }, convertCallback(resultHandler, result -> versions));
     }
 
-    public <T extends LeishvlObject> void delete(final T obj, final boolean includeVersions, final boolean deleteReferences, final Handler<AsyncResult<Boolean>> resultHandler) {
+    public <T extends LeishvlObject> void delete(final T obj, final boolean includeVersions, final boolean deleteReferences,
+                                                 final Handler<AsyncResult<Boolean>> resultHandler) {
         checkArgument(obj != null, "Uninitialized or invalid object.");
         checkArgument(isNotBlank(obj.getLeishvlId()), "Uninitialized or invalid primary key value.");
+        final MutableBoolean deleted = new MutableBoolean(false);
         final MongoCollection<Document> dbcol = getCollection(obj);
         // find and delete records from the database
-        final CompletableFuture<Boolean> deleteFuture = new CompletableFuture<>();
         final Bson filter = (includeVersions ? matchGuid(obj) : matchActive2(obj));
-        dbcol.deleteMany(filter, (result, error) -> {
-            if (error == null) {
-                if (result.getDeletedCount() < 1l) {
-                    deleteFuture.complete(false);
-                } else if (result.getDeletedCount() == 1l || includeVersions) {
-                    // cascade delete
-                    if (deleteReferences) {
-                        supplyAsync(() -> {
-                            deleteReferences(obj.getReferences());
-                            return null;
-                        });
-                    }
-                    deleteFuture.complete(true);
-                } else deleteFuture.completeExceptionally(new IllegalStateException("Multiple records were deleted: " + result.getDeletedCount()));
-            } else deleteFuture.completeExceptionally(error);
-        });
-        // set the new active version to the latest modified record
-        deleteFuture.whenCompleteAsync((deleteResult, error) -> {
-            final CompletableFuture<Document> activeFuture = convertCallback2(resultHandler, document -> true);
-            if (error == null) {
-                if (ofNullable(deleteResult).orElse(false) && !includeVersions) {
-                    activateLastModified(getCollection(obj), obj.getLeishvlId(), activeFuture);
-                    activeFuture.whenCompleteAsync((activeDoc, error2) -> {
-                        if (error2 == null) {
+        dbcol.deleteMany(filter, (delResult, delError) -> {
+            if (delError == null) {
+                deleted.setValue(delResult.getDeletedCount() > 0l);
+                // cascade delete
+                if (deleteReferences && !ofNullable(obj.getReferences()).orElse(Collections.<String, List<String>>emptyMap()).isEmpty()) {
+                    vertx.eventBus().send("mongodb.delete.references", obj.getReferences());
+                }
+                // set the new active version to the latest modified record
+                if (deleted.isTrue() && !includeVersions) {
+                    vertx.runOnContext(v -> activateLastModified(getCollection(obj), obj.getLeishvlId(), activateResult -> {
+                        if (activateResult.succeeded()) {
                             if (LOGGER.isTraceEnabled()) {
+                                final Document activeDoc = activateResult.result();
                                 if (activeDoc != null)
                                     LOGGER.trace("The new active version is '" + activeDoc.getString(LEISHVL_VERSION_FIELD) + "' [collection= "
                                             + obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "]");
                                 else LOGGER.trace("No record was selected as the new active version [collection= "
                                         + obj.getCollection() + ", lvlId=" + obj.getLeishvlId() + "]");
                             }
-                            activeFuture.complete(activeDoc);
-                        } else activeFuture.completeExceptionally(error2);
-                    });
-                } else activeFuture.complete(null);
-            } else activeFuture.completeExceptionally(error);
+                            resultHandler.handle(succeededFuture(deleted.getValue()));
+                        } else resultHandler.handle(failedFuture(activateResult.cause()));
+                    }));
+                } else resultHandler.handle(succeededFuture(deleted.getValue()));
+            } else resultHandler.handle(failedFuture(delError));
         });
     }
 
     private void deleteReferences(final Map<String, List<String>> references) {
         // TODO : if (references != null) then retrieve object from database and invoke delete
+        // TODO : someone has to subscribe to this event
     }
 
     /**
      * Counts the total number of active elements in the specified collection.
      */
-    public <T extends LeishvlObject> void totalCount(final LeishvlCollection<T> collection, final @Nullable List<String> excludedStates, final Handler<AsyncResult<Long>> resultHandler) {
-        totalCount(getCollection(collection), true, excludedStates, wrapCallback2(resultHandler));
+    public <T extends LeishvlObject> void totalCount(final LeishvlCollection<T> collection, final @Nullable List<String> excludedStates,
+                                                     final Handler<AsyncResult<Long>> resultHandler) {
+        totalCount(getCollection(collection), true, excludedStates, resultHandler);
     }
 
     private void totalCount(final MongoCollection<Document> dbcol, final boolean onlyActive,
-                            final @Nullable List<String> excludedStates, final CompletableFuture<Long> future) {
-        requireNonNull(future, "Future expected.");
+                            final @Nullable List<String> excludedStates, final Handler<AsyncResult<Long>> resultHandler) {
+        requireNonNull(resultHandler, "Result handler expected.");
         final Bson activeFilter = (onlyActive ? not(new BsonDocument(LEISHVL_SPARSE_IS_ACTIVE_FIELD, BsonNull.VALUE)) : null);
         final Bson statesFilter = (excludedStates != null && !excludedStates.isEmpty()) ? not(matchStates(excludedStates)) : null;
         final Bson filter = (activeFilter != null && statesFilter != null) ? and(activeFilter, statesFilter)
                 : (activeFilter != null ? activeFilter : (statesFilter != null ? statesFilter : new BsonDocument()));
         final CountOptions options = new CountOptions().hint(IS_ACTIVE_SPARSE_HINT);
-        dbcol.count(filter, options, (result, error) -> {
-            if (error == null) future.complete(result);
-            else future.completeExceptionally(error);
-        });
+        dbcol.count(filter, options, wrapCallback(resultHandler));
     }
 
     /**
@@ -566,7 +539,7 @@ public class MongoConnector {
                 LOGGER.error("Failed to parse result, [collection='" + collection.getCollection() + "', objectId='"
                         + doc.get("_id", ObjectId.class).toHexString() + "'].", e);
             }
-        }, convertCallback(resultHandler, result -> values ));
+        }, convertCallback(resultHandler, result -> values));
     }
 
     /**
@@ -578,21 +551,17 @@ public class MongoConnector {
         final MongoCollection<Document> dbcol = getCollection(collection);
         final MongoCollectionStats stats = new MongoCollectionStats(collection.getCollection());
         // get indexes
-        final CompletableFuture<Void> indexesFuture = new CompletableFuture<>();
-        dbcol.listIndexes().forEach(document -> stats.getIndexes().add(document.toJson()), (result, error) -> {
-            if (error == null) indexesFuture.complete(null); else indexesFuture.completeExceptionally(error);
+        dbcol.listIndexes().forEach(document -> stats.getIndexes().add(document.toJson()), (idxResult, idxError) -> {
+            if (idxError == null) {
+                // count elements
+                vertx.runOnContext(v -> dbcol.count((countResult, countError) -> {
+                    if (countError == null) {
+                        stats.setCount(countResult);
+                        resultHandler.handle(succeededFuture(stats));
+                    } else resultHandler.handle(failedFuture(countError));
+                }));
+            } else resultHandler.handle(failedFuture(idxError));
         });
-        // count elements
-        final CompletableFuture<Void> countFuture = new CompletableFuture<>();
-        dbcol.count((result, error) -> {
-            if (error == null) {
-                stats.setCount(result);
-                countFuture.complete(null);
-            } else countFuture.completeExceptionally(error);
-        });
-        // combine both results to produce collection statistics
-        allOf(indexesFuture, countFuture).whenCompleteAsync((result, error) ->
-                vertx.runOnContext(v -> resultHandler.handle(error == null ? succeededFuture(stats) : failedFuture(error))));
     }
 
     public <T extends LeishvlObject> void drop(final LeishvlCollection<T> collection, final Handler<AsyncResult<Void>> resultHandler) {
@@ -632,16 +601,16 @@ public class MongoConnector {
     private MongoCollection<Document> getCollection(final LeishvlObject obj) {
         checkArgument(obj != null, "Uninitialized object.");
         checkArgument(isNotBlank(obj.getCollection()), "Uninitialized or invalid collection.");
-        vertx.executeBlocking(future -> obj.getConfigurer().prepareCollection(this),
-                res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "]."));
+        /* TODO vertx.executeBlocking(future -> obj.getConfigurer().prepareCollection(this),
+                res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "].")); */
         return holder.db.getCollection(obj.getCollection());
     }
 
     private <T extends LeishvlObject> MongoCollection<Document> getCollection(final LeishvlCollection<T> collection) {
         checkArgument(collection != null, "Uninitialized collection.");
         checkArgument(isNotBlank(collection.getCollection()), "Uninitialized or invalid collection.");
-        vertx.executeBlocking(future -> collection.getConfigurer().prepareCollection(this),
-                res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "]."));
+        /* TODO vertx.executeBlocking(future -> collection.getConfigurer().prepareCollection(this),
+                res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "].")); */
         return holder.db.getCollection(collection.getCollection());
     }
 
@@ -709,7 +678,13 @@ public class MongoConnector {
             if (error != null) {
                 resultHandler.handle(failedFuture(error));
             } else {
-                resultHandler.handle(succeededFuture(converter.apply(result)));
+                R converted = null;
+                try {
+                    converted = converter.apply(result);
+                    resultHandler.handle(succeededFuture(converted));
+                } catch (Exception e) {
+                    resultHandler.handle(failedFuture(e));
+                }
             }
         });
     }
@@ -722,28 +697,6 @@ public class MongoConnector {
                 resultHandler.handle(succeededFuture(result));
             }
         });
-    }
-
-    private <T, R> CompletableFuture<T> convertCallback2(final Handler<AsyncResult<R>> resultHandler, final Function<T, R> converter) {
-        return new CompletableFuture<T>().whenCompleteAsync((result, error) ->
-                vertx.runOnContext(v -> {
-                    if (error != null) {
-                        resultHandler.handle(failedFuture(error));
-                    } else {
-                        resultHandler.handle(succeededFuture(converter.apply(result)));
-                    }
-                }));
-    }
-
-    private <T> CompletableFuture<T> wrapCallback2(final Handler<AsyncResult<T>> resultHandler) {
-        return new CompletableFuture<T>().whenCompleteAsync((result, error) ->
-                vertx.runOnContext(v -> {
-                    if (error != null) {
-                        resultHandler.handle(failedFuture(error));
-                    } else {
-                        resultHandler.handle(succeededFuture(result));
-                    }
-                }));
     }
 
     private void removeFromMap(final LocalMap<String, MongoHolder> map, final String dbName) {

@@ -78,19 +78,16 @@ public final class ProvFactory {
 
 		// import activity
 		final Agent importer = PROVENANCE.softwareAgent(ds2.importer);
-		bundle.getStatement().addAll(asList(new Statement[] { 
-				importer, 
+		bundle.getStatement().addAll(asList(importer,
 				PROVENANCE.factory().newActedOnBehalfOf(null, importer.getId(), system.getId())
-		}));
+		));
 
 		final Activity assignAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("assign"));
 		final WasAssociatedWith assignAssoc = PROVENANCE.factory().newWasAssociatedWith(null, assignAct.getId(), system.getId());
 		final Activity importAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("import"));
 		final WasInformedBy importInf = PROVENANCE.factory().newWasInformedBy(null, assignAct.getId(), importAct.getId());
 		final WasAssociatedWith importAssoc = PROVENANCE.factory().newWasAssociatedWith(null, importAct.getId(), importer.getId());		
-		bundle.getStatement().addAll(asList(new Statement[] {
-				assignAct, assignAssoc, importAct, importInf, importAssoc
-		}));
+		bundle.getStatement().addAll(asList(assignAct, assignAssoc, importAct, importInf, importAssoc));
 
 		final Agent dataSource = PROVENANCE.factory().newAgent(PROVENANCE.qn(ds2.name), asList(new Attribute[] { 
 				PROVENANCE.dataCatalogType(),
@@ -98,12 +95,11 @@ public final class ProvFactory {
 		}));
 		final Entity entity = PROVENANCE.entity(LVL_PREFIX, ds2.type);
 		final Entity ent1 = PROVENANCE.entity(LVL_PREFIX, ds2.objectId, PROVENANCE.datasetType());
-		bundle.getStatement().addAll(asList(new Statement[] {
-				dataSource, entity, ent1, 
+		bundle.getStatement().addAll(asList(dataSource, entity, ent1,
 				PROVENANCE.factory().newSpecializationOf(ent1.getId(), entity.getId()),
 				PROVENANCE.factory().newWasAttributedTo(null, ent1.getId(), dataSource.getId()),
 				PROVENANCE.factory().newUsed(null, importAct.getId(), ent1.getId())
-		}));
+		));
 
 		// download activity
 		final Agent downloader = PROVENANCE.softwareAgent(ds2.downloader);
@@ -111,26 +107,24 @@ public final class ProvFactory {
 		PROVENANCE.factory().addType(downloadAct, PROVENANCE.downloadActionType());
 		final Entity sequenceFormat = PROVENANCE.entity(LVL_PREFIX, ds2.format, PROVENANCE.type(LVL_PREFIX, "DataFormat"));
 		final Entity entRaw = PROVENANCE.entity(LVL_PREFIX, "file1");
-		bundle.getStatement().addAll(asList(new Statement[] {
-				downloader, downloadAct, sequenceFormat, entRaw,
+		bundle.getStatement().addAll(asList(downloader, downloadAct, sequenceFormat, entRaw,
 				PROVENANCE.factory().newActedOnBehalfOf(null, downloader.getId(), importer.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, downloadAct.getId(), downloader.getId()),
 				PROVENANCE.factory().newUsed(null, downloadAct.getId(), ent1.getId()),
 				PROVENANCE.factory().newSpecializationOf(entRaw.getId(), sequenceFormat.getId()),
 				PROVENANCE.factory().newWasGeneratedBy(null, entRaw.getId(), downloadAct.getId(), PROVENANCE.factory().newTimeNow(), null)
-		}));
+		));
 
 		// parse activity
 		final Agent parser = PROVENANCE.softwareAgent(ds2.parser);
 		final Activity parseAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("parse"));
 		final Entity entObj1 = PROVENANCE.entity(LVL_PREFIX, "obj1");
-		bundle.getStatement().addAll(asList(new Statement[] {
-				parser, parseAct, entObj1,
+		bundle.getStatement().addAll(asList(parser, parseAct, entObj1,
 				PROVENANCE.factory().newActedOnBehalfOf(null, parser.getId(), importer.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, parseAct.getId(), parser.getId()),
 				PROVENANCE.factory().newUsed(null, parseAct.getId(), entRaw.getId()),
 				PROVENANCE.factory().newWasGeneratedBy(null, entObj1.getId(), parseAct.getId())
-		}));
+		));
 
 		Entity coord = null;
 		if (gc2 != null) {
@@ -138,13 +132,12 @@ public final class ProvFactory {
 			final Agent geocoder = PROVENANCE.softwareAgent(gc2.geocoder);
 			final Activity geocodeAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("geocode"));
 			coord = PROVENANCE.entity(LVL_PREFIX, "coord1", PROVENANCE.locationAttr(gc2.point));
-			bundle.getStatement().addAll(asList(new Statement[] {
-					geocoder, geocodeAct, coord,
+			bundle.getStatement().addAll(asList(geocoder, geocodeAct, coord,
 					PROVENANCE.factory().newActedOnBehalfOf(null, geocoder.getId(), importer.getId()),
 					PROVENANCE.factory().newWasAssociatedWith(null, geocodeAct.getId(), geocoder.getId()),
 					PROVENANCE.factory().newUsed(null, geocodeAct.getId(), entObj1.getId()),
 					PROVENANCE.factory().newWasGeneratedBy(null, coord.getId(), geocodeAct.getId())
-			}));
+			));
 		}
 
 		// create database record combining the different sources of information				
@@ -166,8 +159,7 @@ public final class ProvFactory {
 		final Activity embedProvAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("embedProv"));
 		final Entity entObj3 = PROVENANCE.entity(LVL_PREFIX, "obj3");
 
-		bundle.getStatement().addAll(asList(new Statement[] {
-				createProvAct, prov,
+		bundle.getStatement().addAll(asList(createProvAct, prov,
 				PROVENANCE.factory().newWasAssociatedWith(null, createProvAct.getId(), importer.getId()),
 				PROVENANCE.factory().newUsed(null, createProvAct.getId(), entObj2.getId()),
 				PROVENANCE.factory().newWasGeneratedBy(null, prov.getId(), createProvAct.getId()),
@@ -178,7 +170,7 @@ public final class ProvFactory {
 				PROVENANCE.factory().newWasDerivedFrom(null, entObj3.getId(), entObj2.getId(), embedProvAct.getId(), null, null, null),
 				PROVENANCE.factory().newWasDerivedFrom(null, entObj3.getId(), prov.getId(), embedProvAct.getId(), null, null, null),
 				PROVENANCE.factory().newWasGeneratedBy(null, entObj3.getId(), embedProvAct.getId())
-		}));
+		));
 
 		// insert document draft in the database
 		final Agent collection = PROVENANCE.factory().newAgent(PROVENANCE.qn(ds2.collection), asList(new Attribute[] { 
@@ -188,8 +180,7 @@ public final class ProvFactory {
 		final Activity insertIntoDbAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("register"));
 		final Entity entityDocument = PROVENANCE.entity(LVL_PREFIX, "LvlDocument");
 		final Entity entObj4 = PROVENANCE.entity(LVL_PREFIX, lvlId2, PROVENANCE.datasetType());		
-		bundle.getStatement().addAll(asList(new Statement[] {
-				collection, dbClient, insertIntoDbAct, entityDocument, entObj4,
+		bundle.getStatement().addAll(asList(collection, dbClient, insertIntoDbAct, entityDocument, entObj4,
 				PROVENANCE.factory().newActedOnBehalfOf(null, dbClient.getId(), importer.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, insertIntoDbAct.getId(), dbClient.getId()),
 				PROVENANCE.factory().newUsed(null, insertIntoDbAct.getId(), entObj3.getId()),
@@ -198,8 +189,7 @@ public final class ProvFactory {
 				PROVENANCE.factory().newWasGeneratedBy(null, entObj4.getId(), importAct.getId()),
 				PROVENANCE.factory().newWasDerivedFrom(null, entObj4.getId(), entObj3.getId(), insertIntoDbAct.getId(), null, null, null),
 				PROVENANCE.factory().newWasEndedBy(null, importAct.getId(), entObj4.getId(), insertIntoDbAct.getId())				
-		}));
-
+		));
 		return graph;
 	}
 
@@ -217,14 +207,12 @@ public final class ProvFactory {
 		final Entity entObj1 = PROVENANCE.entity(LVL_PREFIX, lvlId2, PROVENANCE.datasetType());
 		final Agent creatorAgent = PROVENANCE.personAgent(creator);
 		final Activity createAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("create"));
-		bundle.getStatement().addAll(asList(new Statement[] {
-				entObj1, creatorAgent, createAct,
+		bundle.getStatement().addAll(asList(entObj1, creatorAgent, createAct,
 				PROVENANCE.factory().newUsed(null, createAct.getId(), entObj1.getId()),
 				PROVENANCE.factory().newWasGeneratedBy(null, entObj1.getId(), createAct.getId()),
 				PROVENANCE.factory().newActedOnBehalfOf(null, creatorAgent.getId(), system.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, createAct.getId(), creatorAgent.getId())
-		}));
-
+		));
 		return graph;
 	}
 
@@ -246,16 +234,14 @@ public final class ProvFactory {
 		final Role curatorRole = PROVENANCE.factory().newRole("Curator", PROVENANCE.qn("Curator"));
 		final Used usedObject = PROVENANCE.factory().newUsed(null, editAct.getId(), entObj1.getId());
 		PROVENANCE.factory().addRole(usedObject, curatorRole);
-		bundle.getStatement().addAll(asList(new Statement[] {
-				curatorAgent, editAct, entObj1, entObj2,
+		bundle.getStatement().addAll(asList(curatorAgent, editAct, entObj1, entObj2,
 				PROVENANCE.factory().newActedOnBehalfOf(null, curatorAgent.getId(), system.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, editAct.getId(), curatorAgent.getId()),
 				usedObject,
 				PROVENANCE.factory().newWasInvalidatedBy(null, entObj1.getId(), editAct.getId()),
 				PROVENANCE.factory().newWasGeneratedBy(null, entObj2.getId(), editAct.getId(), PROVENANCE.factory().newTimeNow(), null),
 				PROVENANCE.factory().newWasDerivedFrom(null, entObj2.getId(), entObj1.getId(), editAct.getId(), null, null, null)
-		}));
-
+		));
 		return graph;
 	}
 
@@ -276,14 +262,12 @@ public final class ProvFactory {
 		final Role curatorRole = PROVENANCE.factory().newRole("Curator", PROVENANCE.qn("Curator"));
 		final Used usedObject = PROVENANCE.factory().newUsed(null, invalidateAct.getId(), entObj1.getId());
 		PROVENANCE.factory().addRole(usedObject, curatorRole);
-		bundle.getStatement().addAll(asList(new Statement[] {
-				curatorAgent, invalidateAct, entObj1,
+		bundle.getStatement().addAll(asList(curatorAgent, invalidateAct, entObj1,
 				PROVENANCE.factory().newActedOnBehalfOf(null, curatorAgent.getId(), system.getId()),
 				PROVENANCE.factory().newWasAssociatedWith(null, invalidateAct.getId(), curatorAgent.getId()),
 				usedObject,
 				PROVENANCE.factory().newWasInvalidatedBy(null, entObj1.getId(), invalidateAct.getId(), PROVENANCE.factory().newTimeNow(), null)
-		}));
-
+		));
 		return graph;
 	}
 
@@ -345,12 +329,11 @@ public final class ProvFactory {
 		if (!revisedDraftOpt.isPresent()) {
 			final Activity editAct = PROVENANCE.factory().newActivity(editActQn);
 			final QualifiedName objQn = PROVENANCE.qn(LVL_PREFIX, lvlId2);
-			bundle.getStatement().addAll(asList(new Statement[] {
-					editAct, revisedDraft,
+			bundle.getStatement().addAll(asList(editAct, revisedDraft,
 					PROVENANCE.factory().newUsed(null, editAct.getId(), objQn),
 					PROVENANCE.factory().newWasDerivedFrom(null, revisedDraft.getId(), objQn),
 					PROVENANCE.factory().newWasGeneratedBy(null, revisedDraft.getId(), editAct.getId())
-			}));
+			));
 		}
 
 		// add editor
@@ -360,11 +343,10 @@ public final class ProvFactory {
 				.findFirst().orElse(null));		
 		final Agent editorAgent = (Agent) editorAgentOpt.orElse(PROVENANCE.personAgent(editor));
 		if (!editorAgentOpt.isPresent()) {			
-			bundle.getStatement().addAll(asList(new Statement[] {
-					editorAgent,					
+			bundle.getStatement().addAll(asList(editorAgent,
 					PROVENANCE.factory().newActedOnBehalfOf(null, editorAgent.getId(), system.getId()),
 					PROVENANCE.factory().newWasAssociatedWith(null, editActQn, editorAgent.getId())
-			}));
+			));
 		}
 	}
 
@@ -385,7 +367,7 @@ public final class ProvFactory {
 	}
 
 	private static String parseParam(final String param) {
-		String param2 = null;
+		String param2;
 		checkArgument((param2 = trimToNull(param)) != null, "Uninitialized or invalid parameter");
 		return param2;
 	}
@@ -398,10 +380,9 @@ public final class ProvFactory {
 		final Bundle bundle = PROVENANCE.factory().newNamedBundle(PROVENANCE.qn(provId), PROVENANCE.ns(), Lists.<Statement>newArrayList());
 		final Agent system = PROVENANCE.lvlAgent();
 		final Entity provBundle = PROVENANCE.entity(LVL_PREFIX, provId, PROVENANCE.bundleType());		
-		bundle.getStatement().addAll(asList(new Statement[] { 
-				system, provBundle,
+		bundle.getStatement().addAll(asList(system, provBundle,
 				PROVENANCE.factory().newWasAttributedTo(PROVENANCE.qn("attr"), provBundle.getId(), system.getId())
-		}));
+		));
 
 		graph.getStatementOrBundle().add(bundle);
 		graph.setNamespace(PROVENANCE.ns());
@@ -445,20 +426,20 @@ public final class ProvFactory {
 
 		public static ProvDataSource validate(final ProvDataSource original) {
 			checkArgument(original != null, "Uninitialized data source");
-			String name2 = null;
+			String name2;
 			checkArgument((name2 = trimToNull(original.name)) != null, "Uninitialized or invalid name");
 			checkArgument(original.url != null, "Uninitialized URL");
-			String objectId2 = null;
+			String objectId2;
 			checkArgument((objectId2 = trimToNull(original.objectId)) != null, "Uninitialized or invalid object Id");
-			String type2 = null;
+			String type2;
 			checkArgument((type2 = trimToNull(original.type)) != null, "Uninitialized or invalid type");
 			checkArgument(original.importer != null, "Uninitialized importer");
 			checkArgument(original.downloader != null, "Uninitialized downloader");
 			checkArgument(original.parser != null, "Uninitialized parser");
-			String format2 = null;
+			String format2;
 			checkArgument((format2 = trimToNull(original.format)) != null, "Uninitialized or invalid data format");
 			checkArgument(original.dbObject != null, "Uninitialized database object");
-			String collection2 = null;
+			String collection2;
 			checkArgument((collection2 = trimToNull(original.collection)) != null, "Uninitialized or invalid collection");
 			return new ProvDataSource(name2, original.url, objectId2, type2, 
 					original.importer, original.downloader, original.parser, format2, 
@@ -485,10 +466,10 @@ public final class ProvFactory {
 
 	// TODO
 
-	public static class EntrezHelper { }
-	public static class HttpClientProvider { }
-	public static class GbSeqXmlBinder { }
-	public static class PubMedXmlBinder { }
-	public static class GeocodingHelper { }		
+	public static class EntrezHelper { } // TODO
+	public static class HttpClientProvider { } // TODO
+	public static class GbSeqXmlBinder { } // TODO
+	public static class PubMedXmlBinder { } // TODO
+	public static class GeocodingHelper { } // TODO
 
 }

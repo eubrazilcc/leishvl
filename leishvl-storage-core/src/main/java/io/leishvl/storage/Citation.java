@@ -22,6 +22,15 @@
 
 package io.leishvl.storage;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+import io.leishvl.core.xml.ncbi.pubmed.PubmedArticle;
+import io.leishvl.storage.base.LeishvlObject;
+import io.leishvl.storage.mongodb.MongoCollectionConfigurer;
+
+import java.util.Map;
+import java.util.Objects;
+
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
@@ -29,122 +38,110 @@ import static io.leishvl.storage.mongodb.MongoCollectionConfigurer.nonUniqueInde
 import static io.leishvl.storage.mongodb.MongoCollectionConfigurer.textIndexModel;
 import static org.slf4j.LoggerFactory.getLogger;
 
-import java.util.Map;
-import java.util.Objects;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
-
-import io.leishvl.core.xml.ncbi.pubmed.PubmedArticle;
-import io.leishvl.storage.base.LeishvlObject;
-import io.leishvl.storage.mongodb.MongoCollectionConfigurer;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-
 /**
  * Represents a publication citation, including the original PubMed article and additional annotations provided by the LeishVL users.
  * @author Erik Torres <ertorser@upv.es>
  */
 public class Citation extends LeishvlObject {
 
-	public static final String COLLECTION      = "citations";	
-	public static final String PUBMED_PMID     = "pubmed.medlineCitation.pmid.value";
-	public static final String PUBMED_TITLE    = "pubmed.medlineCitation.article.articleTitle";
-	public static final String PUBMED_ABSTRACT = "pubmed.medlineCitation.article.abstract.abstractText";
-	public static final String PUBMED_YEAR     = "pubmed.medlineCitation.dateCreated.year.value";
+    public static final String COLLECTION      = "citations";
+    public static final String PUBMED_PMID     = "pubmed.medlineCitation.pmid.value";
+    public static final String PUBMED_TITLE    = "pubmed.medlineCitation.article.articleTitle";
+    public static final String PUBMED_ABSTRACT = "pubmed.medlineCitation.article.abstract.abstractText";
+    public static final String PUBMED_YEAR     = "pubmed.medlineCitation.dateCreated.year.value";
 
-	public static final MongoCollectionConfigurer CONFIGURER = new MongoCollectionConfigurer(COLLECTION, true, newArrayList(
-			nonUniqueIndexModel(PUBMED_PMID, false),
-			nonUniqueIndexModel(PUBMED_YEAR, false),
-			textIndexModel(ImmutableList.of(PUBMED_TITLE, PUBMED_ABSTRACT), COLLECTION)));
+    public static final MongoCollectionConfigurer CONFIGURER = new MongoCollectionConfigurer(COLLECTION, true, newArrayList(
+            nonUniqueIndexModel(PUBMED_PMID, false),
+            nonUniqueIndexModel(PUBMED_YEAR, false),
+            textIndexModel(ImmutableList.of(PUBMED_TITLE, PUBMED_ABSTRACT), COLLECTION)));
 
-	@JsonProperty("links")
-	private Map<String, Link> links; // HATEOAS links
+    @JsonProperty("links")
+    private Map<String, Link> links; // HATEOAS links
 
-	private LeishvlCitation leishvl; // LeishVL citation	
-	private PubmedArticle pubmed; // original PubMed article
+    private LeishvlCitation leishvl; // LeishVL citation
+    private PubmedArticle pubmed; // original PubMed article
 
-	public Citation(final Vertx vertx, final JsonObject config) {
-		super(vertx, config, COLLECTION, CONFIGURER, getLogger(Citation.class));
-	}
+    public Citation() {
+        super(COLLECTION, CONFIGURER, getLogger(Citation.class));
+    }
 
-	@Override	
-	public Map<String, Link> getLinks() {
-		return links;
-	}
+    @Override
+    public Map<String, Link> getLinks() {
+        return links;
+    }
 
-	@Override
-	public void setLinks(final Map<String, Link> links) {
-		this.links = (links != null ? newHashMap(links) : null);		
-	}
+    @Override
+    public void setLinks(final Map<String, Link> links) {
+        this.links = (links != null ? newHashMap(links) : null);
+    }
 
-	public LeishvlCitation getLeishvl() {
-		return leishvl;
-	}
+    public LeishvlCitation getLeishvl() {
+        return leishvl;
+    }
 
-	public void setLeishvl(final LeishvlCitation leishvl) {
-		this.leishvl = leishvl;
-	}
+    public void setLeishvl(final LeishvlCitation leishvl) {
+        this.leishvl = leishvl;
+    }
 
-	public PubmedArticle getPubmed() {
-		return pubmed;
-	}
+    public PubmedArticle getPubmed() {
+        return pubmed;
+    }
 
-	public void setPubmed(final PubmedArticle pubmed) {
-		this.pubmed = pubmed;
-	}
+    public void setPubmed(final PubmedArticle pubmed) {
+        this.pubmed = pubmed;
+    }
 
-	@Override
-	public boolean equals(final Object obj) {
-		if (obj == null || !(obj instanceof Citation)) {
-			return false;
-		}
-		final Citation other = Citation.class.cast(obj);
-		return super.equals((LeishvlObject)other)
-				&& Objects.equals(leishvl, other.leishvl);		
-	}
+    @Override
+    public boolean equals(final Object obj) {
+        if (obj == null || !(obj instanceof Citation)) {
+            return false;
+        }
+        final Citation other = Citation.class.cast(obj);
+        return super.equals(other)
+                && Objects.equals(leishvl, other.leishvl);
+    }
 
-	@Override
-	public int hashCode() {
-		return super.hashCode() + Objects.hash(leishvl);
-	}
+    @Override
+    public int hashCode() {
+        return super.hashCode() + Objects.hash(leishvl);
+    }
 
-	@Override
-	public String toString() {
-		return toStringHelper(this)
-				.add(LeishvlObject.class.getSimpleName(), super.toString())
-				.add("lvl", leishvl)				
-				.add("pubmed", "<<original PubMed article is not displayed>>")
-				.toString();
-	}
+    @Override
+    public String toString() {
+        return toStringHelper(this)
+                .add(LeishvlObject.class.getSimpleName(), super.toString())
+                .add("lvl", leishvl)
+                .add("pubmed", "<<original PubMed article is not displayed>>")
+                .toString();
+    }
 
 	/* Fluent API */
 
-	public static Builder builder(final Vertx vertx, final JsonObject config) {
-		return new Builder(vertx, config);
-	}	
+    public static Builder builder() {
+        return new Builder();
+    }
 
-	public static class Builder extends LeishvlObject.Builder<Citation, Builder> {
+    public static class Builder extends LeishvlObject.Builder<Citation, Builder> {
 
-		public Builder(final Vertx vertx, final JsonObject config) {
-			super(new Citation(vertx, config));
-			setBuilder(this);
-		}
+        public Builder() {
+            super(new Citation());
+            setBuilder(this);
+        }
 
-		public Builder leishvl(final LeishvlCitation leishvl) {
-			instance.setLeishvl(leishvl);
-			return this;
-		}
+        public Builder leishvl(final LeishvlCitation leishvl) {
+            instance.setLeishvl(leishvl);
+            return this;
+        }
 
-		public Builder pubmed(final PubmedArticle pubmed) {
-			instance.setPubmed(pubmed);
-			return this;
-		}
+        public Builder pubmed(final PubmedArticle pubmed) {
+            instance.setPubmed(pubmed);
+            return this;
+        }
 
-		public Citation build() {
-			return instance;
-		}
+        public Citation build() {
+            return instance;
+        }
 
-	}
+    }
 
 }
