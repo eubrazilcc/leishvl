@@ -70,9 +70,7 @@ public abstract class ObjectStateHandler<T extends LeishvlObject> {
                 } catch (IllegalAccessException | InvocationTargetException e) {
                     resultHandler.handle(failedFuture(e));
                 }
-            } else {
-                resultHandler.handle(failedFuture(event.cause()));
-            }
+            } else resultHandler.handle(failedFuture(event.cause()));
         });
     }
 

@@ -254,16 +254,34 @@ public class MongoConnector {
         checkArgument(obj != null && obj.getClass().isAssignableFrom(type), "Uninitialized or invalid object type.");
         checkArgument(isNotBlank(obj.getLeishvlId()), "Uninitialized or invalid primary key value.");
         final MongoCollection<Document> dbcol = getCollection(obj);
-        dbcol.find(matchActive(obj)).modifiers(new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT)).sort(LAST_MODIFIED_SORT_DESC).first(convertCallback(resultHandler, new Function<Document, LeishvlObject>() {
-            @Override
-            public LeishvlObject apply(final Document result) { // TODO
-                if (result == null) throw new LeishvlObjectNotFoundException("Object not found.");
-                else {
-                    try {
-                        return parseDocument(result, type);
-                    } catch (Exception e) {
-                        throw new IllegalStateException("Failed to parse result document.", e);
-                    }
+
+        // TODO
+        System.err.println("\n\n >> HERE: Inside find method.\n");
+        // TODO
+
+        dbcol.find(matchActive(obj)).modifiers(new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT)).sort(LAST_MODIFIED_SORT_DESC).first(convertCallback(resultHandler, result -> {
+
+            // TODO
+            System.err.println("\n\n >> HERE: Inside find handler.\n");
+            // TODO
+
+            if (result == null) {
+
+                // TODO
+                System.err.println("\n\n >> HERE: Object not found.\n");
+                // TODO
+
+                throw new LeishvlObjectNotFoundException("Object not found.");
+            } else {
+                try {
+                    return parseDocument(result, type);
+                } catch (Exception e) {
+
+                    // TODO
+                    System.err.println("\n\n >> HERE: Failed to parse result document.\n");
+                    // TODO
+
+                    throw new IllegalStateException("Failed to parse result document.", e);
                 }
             }
         }));
@@ -599,18 +617,22 @@ public class MongoConnector {
     }
 
     private MongoCollection<Document> getCollection(final LeishvlObject obj) {
-        checkArgument(obj != null, "Uninitialized object.");
+        requireNonNull(obj, "Uninitialized object.");
         checkArgument(isNotBlank(obj.getCollection()), "Uninitialized or invalid collection.");
-        /* TODO vertx.executeBlocking(future -> obj.getConfigurer().prepareCollection(this),
-                res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "].")); */
+        vertx.executeBlocking(future -> {
+                    obj.getConfigurer().prepareCollection(this);
+                    future.complete();
+                }, res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "]."));
         return holder.db.getCollection(obj.getCollection());
     }
 
     private <T extends LeishvlObject> MongoCollection<Document> getCollection(final LeishvlCollection<T> collection) {
-        checkArgument(collection != null, "Uninitialized collection.");
+        requireNonNull(collection, "Uninitialized collection.");
         checkArgument(isNotBlank(collection.getCollection()), "Uninitialized or invalid collection.");
-        /* TODO vertx.executeBlocking(future -> collection.getConfigurer().prepareCollection(this),
-                res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "].")); */
+        vertx.executeBlocking(future -> {
+                    collection.getConfigurer().prepareCollection(this);
+                    future.complete();
+                }, res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "]."));
         return holder.db.getCollection(collection.getCollection());
     }
 

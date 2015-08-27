@@ -20,9 +20,8 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.storage;
+package io.leishvl.core;
 
-import io.leishvl.test.suite.LeishvlTestSuite;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -38,14 +37,12 @@ import static io.leishvl.core.LogManager.LOG_MANAGER;
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(Suite.class)
-@SuiteClasses({ })
+@SuiteClasses({ GeoJsonTest.class })
 public class AllJUnitTests {
 
 	@BeforeClass
 	public static void setup() {
 		System.out.println("AllJUnitTests.setup()");
-		final LeishvlTestSuite testSuite = new LeishvlTestSuite();
-		testSuite.getTestResourcePath();
 		// load logging bridges
 		LOG_MANAGER.init();
 		// system pre-loading

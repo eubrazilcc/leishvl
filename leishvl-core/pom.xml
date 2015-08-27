@@ -319,7 +319,14 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<!-- JUnit test -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>				
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Xmx1024M -Xss1024k -XX:+UseConcMarkSweepGC</argLine>
+					<!-- Configure JUnit tests to go through the JUnit test suite -->
+					<includes>
+						<include>**/AllJUnitTests.java</include>
+					</includes>
+				</configuration>
 			</plugin>
 			<!-- Integration test -->
 			<plugin>

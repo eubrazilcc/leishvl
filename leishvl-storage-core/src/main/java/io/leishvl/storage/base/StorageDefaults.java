@@ -28,8 +28,8 @@ package io.leishvl.storage.base;
  */
 public interface StorageDefaults {
 
-	public static final long STO_OPERATION_TIMEOUT_SECS = 5l;
+	long STO_OPERATION_TIMEOUT_SECS = 5l;
 	
-	public static int TYPEAHEAD_MAX_ITEMS = 10;
+	int TYPEAHEAD_MAX_ITEMS = 10;
 	
 }

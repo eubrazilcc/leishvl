@@ -43,6 +43,13 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<artifactId>jackson-databind</artifactId>
 			<scope>provided</scope>
 		</dependency>
+
+        <!-- Vert.x -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-unit</artifactId>
+            <scope>provided</scope>
+        </dependency>
 		
 		<!-- JUnit -->
 		<dependency>

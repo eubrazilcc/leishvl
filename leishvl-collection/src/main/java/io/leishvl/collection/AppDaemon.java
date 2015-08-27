@@ -97,6 +97,7 @@ public class AppDaemon extends LeishvlDaemon {
 		final VertxOptions vertxOptions = new VertxOptions().setClustered(true)
 				.setClusterHost(config.getString("leishvl.cluster.host"));
 		final Map<String, Object> verticleConfig = newHashMap();
+        verticleConfig.put("daemon-service.startup-timeout", config.getLong("leishvl.daemon-service.startup-timeout"));
 		verticleConfig.put("http-server.port", config.getInt("leishvl.http-server.port"));
 		verticleConfig.put("cluster.members", config.getStringList("leishvl.cluster.members"));
 		final DeploymentOptions deploymentOptions = new DeploymentOptions()

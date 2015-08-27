@@ -24,12 +24,13 @@ package io.leishvl.storage;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static io.leishvl.storage.mongodb.MongoConnectors.createShared;
-import static org.junit.Assert.fail;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.bson.Document;
+import org.geojson.Point;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,6 +40,14 @@ import com.google.common.collect.ImmutableMap;
 import com.mongodb.client.model.IndexModel;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+
+import static org.apache.commons.lang3.StringUtils.trim;
+import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import io.leishvl.storage.mongodb.MongoConnector;
 import io.vertx.core.AbstractVerticle;
@@ -93,8 +102,8 @@ public class BaseOperationsTest {
 	}
 
 	@Test
-	public void test1(final TestContext testCtxt) {
-		System.out.println("BaseOperationsTest.test1()");
+	public void test(final TestContext testCtxt) {
+		System.out.println("BaseOperationsTest.test()");
 		try {
 			// test open a database connection
 			verticle.openConnection();
@@ -113,9 +122,9 @@ public class BaseOperationsTest {
 
 		} catch (Exception e) {
 			e.printStackTrace(System.err);
-			fail("BaseOperationsTest.test1() failed: " + e.getMessage());
+			testCtxt.fail("BaseOperationsTest.test() failed: " + e.getMessage());
 		} finally {
-			System.out.println("BaseOperationsTest.test1() has finished");
+			System.out.println("BaseOperationsTest.test() has finished");
 		}
 	}
 

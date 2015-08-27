@@ -22,14 +22,16 @@
 
 package io.leishvl.core.util;
 
-import static com.google.common.base.Preconditions.checkState;
-import static io.leishvl.core.geospatial.Wgs84Validator.WGS84_URN_CRS;
+import org.geojson.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
-import org.geojson.*;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.math.DoubleMath.fuzzyEquals;
+import static io.leishvl.core.geospatial.Wgs84Validator.WGS84_URN_CRS;
 
 /**
  * Utilities to work with GeoJSON objects.
@@ -37,59 +39,73 @@ import static com.google.common.collect.Lists.newArrayList;
  */
 public final class GeoJsons {
 
-	public static FeatureCollection featureCollectionWGS84() {
-		final Crs crs = new Crs();
-		crs.getProperties().put("name", WGS84_URN_CRS);
-		final FeatureCollection featureCollection = new FeatureCollection();
-		featureCollection.setCrs(crs);
-		return featureCollection;
-	}
+    public static final double TOLERANCE = 0.00000001d;
 
-	public static String lngLatAlt2Human(final LngLatAlt lngLatAlt) {
-		return lngLatAlt.getLatitude() + "\u00b0" + " N " + lngLatAlt.getLongitude() + "\u00b0" + " W";
-	}
-	
-	public static FeatureBuilder featureBuilder() {
-		return new FeatureBuilder();
-	}
+    public static final BiFunction<Point, Point, Boolean> POINT_FUZZY_EQUALS = (p1, p2) -> {
+        if (p1 == p2) return true;
+        else if (p1 == null || p2 == null) return false;
+        final LngLatAlt c1 = p1.getCoordinates();
+        final LngLatAlt c2 = p2.getCoordinates();
+        if (c1 == c2) return true;
+        else if (c1 == null || c2 == null) return false;
+        return fuzzyEquals(c1.getLongitude(), c2.getLongitude(), TOLERANCE)
+                && fuzzyEquals(c1.getLatitude(), c2.getLatitude(), TOLERANCE)
+                && fuzzyEquals(c1.getAltitude(), c2.getAltitude(), TOLERANCE);
+    };
+
+    public static FeatureCollection featureCollectionWGS84() {
+        final Crs crs = new Crs();
+        crs.getProperties().put("name", WGS84_URN_CRS);
+        final FeatureCollection featureCollection = new FeatureCollection();
+        featureCollection.setCrs(crs);
+        return featureCollection;
+    }
+
+    public static String lngLatAlt2Human(final LngLatAlt lngLatAlt) {
+        return lngLatAlt.getLatitude() + "\u00b0" + " N " + lngLatAlt.getLongitude() + "\u00b0" + " W";
+    }
+
+    public static FeatureBuilder featureBuilder() {
+        return new FeatureBuilder();
+    }
 
     public static LngLatAltBuilder lngLatAltBuilder() { return new LngLatAltBuilder(); }
 
-	public static PointBuilder pointBuilder() { return new PointBuilder(); }
+    public static PointBuilder pointBuilder() { return new PointBuilder(); }
 
     public static PolygonBuilder polygonBuilder() { return new PolygonBuilder(); }
 
 	/* Inner classes */
-	
-	public static class FeatureBuilder {
 
-		private Feature instance = new Feature();
+    public static class FeatureBuilder {
 
-		public FeatureBuilder geometry(final GeoJsonObject geometry) {
-			instance.setGeometry(geometry);
-			return this;
-		}
+        private Feature instance = new Feature();
 
-		public FeatureBuilder properties(final Map<String, Object> properties) {
-			instance.getProperties().putAll(properties);
-			return this;
-		}
+        public FeatureBuilder geometry(final GeoJsonObject geometry) {
+            instance.setGeometry(geometry);
+            return this;
+        }
 
-		public FeatureBuilder property(final String key, final Object value) {
-			instance.getProperties().put(key, value);
-			return this;
-		}
+        public FeatureBuilder properties(final Map<String, Object> properties) {
+            instance.getProperties().putAll(properties);
+            return this;
+        }
 
-		public FeatureBuilder id(final String id) {
-			instance.setId(id);
-			return this;
-		}
+        public FeatureBuilder property(final String key, final Object value) {
+            instance.getProperties().put(key, value);
+            return this;
+        }
 
-		public Feature build() {		
-			return instance;
-		}
+        public FeatureBuilder id(final String id) {
+            instance.setId(id);
+            return this;
+        }
 
-	}
+        public Feature build() {
+            return instance;
+        }
+
+    }
 
     public static class LngLatAltBuilder {
 
@@ -124,7 +140,7 @@ public final class GeoJsons {
 
     }
 
-	public static class PointBuilder {
+    public static class PointBuilder {
 
         private Point instance = new Point();
 

@@ -52,6 +52,7 @@ import java.util.*;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.Maps.newHashMap;
+import static io.leishvl.core.util.GeoJsons.POINT_FUZZY_EQUALS;
 import static io.leishvl.core.util.NamingUtils.urlEncodeUtf8;
 import static io.leishvl.storage.base.ObjectState.*;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonMapper.objectToJson;
@@ -334,7 +335,8 @@ public abstract class LeishvlObject implements Linkable {
         return Objects.equals(namespace.orElse(null), other.namespace.orElse(null))
                 && Objects.equals(leishvlId, other.leishvlId)
                 && Objects.equals(version, other.version)
-                && Objects.equals(location.orElse(null), other.location.orElse(null))
+                && POINT_FUZZY_EQUALS.apply(location.orElse(null), other.location.orElse(null))
+                // Objects.equals(location.orElse(null), other.location.orElse(null))
                 && (provenance.isPresent() == other.provenance.isPresent())
                 && Objects.equals(state.orElse(null), other.state.orElse(null))
                 && Objects.equals(lastModified, other.lastModified)

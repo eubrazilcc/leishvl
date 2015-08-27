@@ -63,28 +63,23 @@ public class VertxService extends AbstractIdleService {
     private final List<Class<?>> verticles;
 
     public VertxService(final List<Class<?>> verticles, final @Nullable VertxOptions vertxOptions, final @Nullable DeploymentOptions deploymentOptions) {
-        this.verticles = verticles;
+        this.verticles = requireNonNull(verticles, "Verticles list expected.");
         this.vertxOptions = ofNullable(vertxOptions).orElse(new VertxOptions());
         this.deploymentOptions = ofNullable(deploymentOptions).orElse(new DeploymentOptions());
     }
 
     @Override
     protected void startUp() throws Exception {
-        final Consumer<Vertx> runner = vertx -> {
-            for (final Class<?> verticle : verticles) {
-                vertx.deployVerticle(verticle.getCanonicalName(), deploymentOptions, (result) -> {
-                    if (result != null) {
-                        if (result.succeeded()) LOGGER.info("New verticle deployed: [type=" + verticle.getSimpleName() + ", id=" + result.result() + "].");
-                        else LOGGER.error("Failed to deploy verticle [type=" + verticle.getSimpleName() + "].", result.cause());
-                    } else LOGGER.error("Failed to deploy verticle [type=" + verticle.getSimpleName() + "]. Unknown cause.");
-                });
-            }
-        };
+        final Consumer<Vertx> runner = vertx -> verticles.stream().forEach(verticle -> vertx.deployVerticle(verticle.getCanonicalName(), deploymentOptions, result -> {
+            if (result != null) {
+                if (result.succeeded()) LOGGER.info("New verticle deployed: [type=" + verticle.getSimpleName() + ", id=" + result.result() + "].");
+                else LOGGER.error("Failed to deploy verticle [type=" + verticle.getSimpleName() + "].", result.cause());
+            } else LOGGER.error("Failed to deploy verticle [type=" + verticle.getSimpleName() + "]. Unknown cause.");
+        }));
         final CompletableFuture<Void> future = new CompletableFuture<>();
         if (vertxOptions.isClustered()) {
             // configure Hazelcast
             final Config hazelcastConfig = new ClasspathXmlConfig("leishvl-cluster.xml");
-            requireNonNull(hazelcastConfig, "Failed to open default cluster configuration.");
             final NetworkConfig network = hazelcastConfig.getNetworkConfig();
             network.getJoin().getTcpIpConfig().setMembers(deploymentOptions.getConfig().getJsonArray("cluster.members")
                     .stream()
@@ -107,9 +102,10 @@ public class VertxService extends AbstractIdleService {
             future.complete(null);
         }
         try {
-            future.get(30, TimeUnit.SECONDS);
-        } catch (InterruptedException | TimeoutException ignore) {
-            // silently ignored
+            future.get(deploymentOptions.getConfig().getLong("daemon-service.startup-timeout"), TimeUnit.SECONDS);
+            // additional startup operations could be executed here
+        } catch (InterruptedException | TimeoutException e) {
+            throw new IllegalStateException("Given up to start service daemon due to interruption or timeout.");
         } catch (ExecutionException e) {
             throw (e.getCause() instanceof Exception ? (Exception)e.getCause() : e);
         }

@@ -22,26 +22,22 @@
 
 package io.leishvl.storage.mongodb;
 
-import static com.google.common.collect.Lists.newArrayList;
-import static com.mongodb.MongoCredential.createMongoCRCredential;
-import static com.mongodb.ReadPreference.nearest;
-import static com.mongodb.WriteConcern.ACKNOWLEDGED;
-import static com.mongodb.connection.ClusterType.REPLICA_SET;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.client.MongoClientSettings;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.selector.LatencyMinimizingServerSelector;
-
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static com.google.common.collect.Lists.newArrayList;
+import static com.mongodb.MongoCredential.createMongoCRCredential;
+import static com.mongodb.ReadPreference.nearest;
+import static com.mongodb.WriteConcern.ACKNOWLEDGED;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Parses mongoDB client options.
@@ -49,42 +45,39 @@ import io.vertx.core.json.JsonObject;
  */
 public class MongoConnectorOptionsParser {
 
-	public static final long LAT_DIFF_MS = 2000l;
+    public static final long LAT_DIFF_MS = 2000l;
 
-	private final JsonObject config;
+    private final JsonObject config;
 
-	public MongoConnectorOptionsParser(final JsonObject config) {
-		this.config = config;
-	}
+    public MongoConnectorOptionsParser(final JsonObject config) {
+        this.config = config;
+    }
 
-	public MongoClientSettings settings() {
-		// cluster settings
-		final List<ServerAddress> hosts = config.getJsonArray("hosts", defaultHosts()).stream().map(new Function<Object, ServerAddress>() {
-			@Override
-			public ServerAddress apply(final Object input) {
-				final JsonObject json = (JsonObject)input;
-				return new ServerAddress(json.getString("host"), json.getInteger("port"));
-			}
-		}).filter(host -> host != null).collect(Collectors.toList());
-		final ClusterSettings clusterSettings = ClusterSettings.builder()
-				.hosts(hosts)
-				.serverSelector(new LatencyMinimizingServerSelector(LAT_DIFF_MS, MILLISECONDS))
-				// TODO .requiredClusterType(REPLICA_SET)
-				// TODO .requiredReplicaSetName(config.getString("replica_set", "leishvl"))
-				.build();
-		// authentication settings (requires mongoDB to be configured to support authentication)
-		final List<MongoCredential> credentialList = newArrayList(createMongoCRCredential(config.getString("user"), 
-				config.getString("db_name"), config.getString("pwd", "").toCharArray()));
-		return MongoClientSettings.builder()
-				.readPreference(nearest())
-				.writeConcern(ACKNOWLEDGED)
-				.clusterSettings(clusterSettings)
-				// TODO .credentialList(credentialList)
-				.build();		
-	}
+    public MongoClientSettings settings() {
+        // cluster settings
+        final List<ServerAddress> hosts = config.getJsonArray("hosts", defaultHosts()).stream().map(input -> {
+            final JsonObject json = (JsonObject) input;
+            return new ServerAddress(json.getString("host"), json.getInteger("port"));
+        }).filter(host -> host != null).collect(Collectors.toList());
+        final ClusterSettings clusterSettings = ClusterSettings.builder()
+                .hosts(hosts)
+                .serverSelector(new LatencyMinimizingServerSelector(LAT_DIFF_MS, MILLISECONDS))
+                        // TODO .requiredClusterType(REPLICA_SET)
+                        // TODO .requiredReplicaSetName(config.getString("replica_set", "leishvl"))
+                .build();
+        // authentication settings (requires mongoDB to be configured to support authentication)
+        final List<MongoCredential> credentialList = newArrayList(createMongoCRCredential(config.getString("user"),
+                config.getString("db_name"), config.getString("pwd", "").toCharArray()));
+        return MongoClientSettings.builder()
+                .readPreference(nearest())
+                .writeConcern(ACKNOWLEDGED)
+                .clusterSettings(clusterSettings)
+                        // TODO .credentialList(credentialList)
+                .build();
+    }
 
-	private static JsonArray defaultHosts() {
-		return new JsonArray().add(new JsonObject().put("host", "127.0.0.1").put("port", "27017"));
-	}
+    private static JsonArray defaultHosts() {
+        return new JsonArray().add(new JsonObject().put("host", "127.0.0.1").put("port", "27017"));
+    }
 
 }
