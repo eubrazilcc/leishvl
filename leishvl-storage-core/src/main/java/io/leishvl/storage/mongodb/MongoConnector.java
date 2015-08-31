@@ -43,7 +43,6 @@ import io.leishvl.storage.LeishvlObjectNotFoundException;
 import io.leishvl.storage.LeishvlObjectWriteException;
 import io.leishvl.storage.base.LeishvlCollection;
 import io.leishvl.storage.base.LeishvlObject;
-import io.leishvl.storage.base.StorageDefaults;
 import io.leishvl.storage.mongodb.jackson.MongoDateDeserializer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -80,6 +79,7 @@ import static io.leishvl.core.util.GeoJsons.featureBuilder;
 import static io.leishvl.core.util.GeoJsons.featureCollectionWGS84;
 import static io.leishvl.storage.Filters.LogicalType.LOGICAL_AND;
 import static io.leishvl.storage.base.LeishvlObject.*;
+import static io.leishvl.storage.base.StorageDefaults.TYPEAHEAD_MAX_ITEMS;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonMapper.JSON_MAPPER;
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
@@ -254,33 +254,12 @@ public class MongoConnector {
         checkArgument(obj != null && obj.getClass().isAssignableFrom(type), "Uninitialized or invalid object type.");
         checkArgument(isNotBlank(obj.getLeishvlId()), "Uninitialized or invalid primary key value.");
         final MongoCollection<Document> dbcol = getCollection(obj);
-
-        // TODO
-        System.err.println("\n\n >> HERE: Inside find method.\n");
-        // TODO
-
         dbcol.find(matchActive(obj)).modifiers(new BsonDocument("$hint", IS_ACTIVE_SPARSE_HINT)).sort(LAST_MODIFIED_SORT_DESC).first(convertCallback(resultHandler, result -> {
-
-            // TODO
-            System.err.println("\n\n >> HERE: Inside find handler.\n");
-            // TODO
-
-            if (result == null) {
-
-                // TODO
-                System.err.println("\n\n >> HERE: Object not found.\n");
-                // TODO
-
-                throw new LeishvlObjectNotFoundException("Object not found.");
-            } else {
+            if (result == null) throw new LeishvlObjectNotFoundException("Object not found.");
+            else {
                 try {
                     return parseDocument(result, type);
                 } catch (Exception e) {
-
-                    // TODO
-                    System.err.println("\n\n >> HERE: Failed to parse result document.\n");
-                    // TODO
-
                     throw new IllegalStateException("Failed to parse result document.", e);
                 }
             }
@@ -536,7 +515,7 @@ public class MongoConnector {
         checkArgument(isNotBlank(field2 = trimToNull(field)), "Uninitialized or invalid field.");
         checkArgument(isNotBlank(query2 = trimToNull(query)), "Uninitialized or invalid query.");
         final MongoCollection<Document> dbcol = getCollection(collection);
-        final int size2 = size > 0 ? size : StorageDefaults.TYPEAHEAD_MAX_ITEMS;
+        final int size2 = size > 0 ? size : TYPEAHEAD_MAX_ITEMS;
         final List<String> values = newArrayList();
         final Bson statesFilter = (excludedStates != null && !excludedStates.isEmpty()) ? not(matchStates(excludedStates)) : null;
         final Bson typeaheadFilter = regex(field2, query2, "i");
@@ -618,11 +597,10 @@ public class MongoConnector {
 
     private MongoCollection<Document> getCollection(final LeishvlObject obj) {
         requireNonNull(obj, "Uninitialized object.");
-        checkArgument(isNotBlank(obj.getCollection()), "Uninitialized or invalid collection.");
         vertx.executeBlocking(future -> {
-                    obj.getConfigurer().prepareCollection(this);
-                    future.complete();
-                }, res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "]."));
+            obj.getConfigurer().prepareCollection(this);
+            future.complete();
+        }, res -> LOGGER.info("Configurer successfully executed [collection=" + obj.getCollection() + "]."));
         return holder.db.getCollection(obj.getCollection());
     }
 
@@ -630,9 +608,9 @@ public class MongoConnector {
         requireNonNull(collection, "Uninitialized collection.");
         checkArgument(isNotBlank(collection.getCollection()), "Uninitialized or invalid collection.");
         vertx.executeBlocking(future -> {
-                    collection.getConfigurer().prepareCollection(this);
-                    future.complete();
-                }, res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "]."));
+            collection.getConfigurer().prepareCollection(this);
+            future.complete();
+        }, res -> LOGGER.info("Configurer successfully executed [collection=" + collection.getCollection() + "]."));
         return holder.db.getCollection(collection.getCollection());
     }
 

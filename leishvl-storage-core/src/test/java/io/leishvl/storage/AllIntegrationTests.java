@@ -39,7 +39,8 @@ import io.leishvl.test.suite.LeishvlTestSuite;
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(Suite.class)
-@SuiteClasses({ BaseOperationsTest.class, CitationCollectionTest.class })
+// TODO @SuiteClasses({ BaseOperationsTest.class, CitationCollectionTest.class })
+@SuiteClasses({ CitationCollectionTest.class })
 public class AllIntegrationTests {
 
 	@BeforeClass

@@ -89,42 +89,30 @@ public class MongoCollectionConfigurer {
 
     public void prepareCollection(final MongoConnector conn) {
         final boolean shouldRun = isConfigured.compareAndSet(false, true);
-        final CompletableFuture<Void> future = new CompletableFuture<>();
         if (shouldRun) {
+            final List<CompletableFuture<Boolean>> futures = newArrayList();
             // create indexes
             if (indexes != null && !indexes.isEmpty()) {
+                final CompletableFuture<Boolean> indexesFuture = new CompletableFuture<>();
+                futures.add(indexesFuture);
                 conn.createIndexes(collection, indexes, result -> {
                     if (result.succeeded()) {
                         LOGGER.info("Collection indexes were successfully created [collection=" + collection + "].");
-                        // run pre-load operations
-                        if (preload != null) {
-                            try {
-                                if (preload.getAsBoolean()) LOGGER.info("Pre-load successfully executed [collection=" + collection + "].");
-                                else LOGGER.warn("Pre-load executed with errors [collection=" + collection + "].");
-                                future.complete(null);
-                            } catch (Exception e) {
-                                future.completeExceptionally(e);
-                            }
-                        }
-                    } else future.completeExceptionally(result.cause());
+                        indexesFuture.complete(true);
+                    } else indexesFuture.completeExceptionally(result.cause());
                 });
-            } else if (preload != null) {
-                // run pre-load operations
-                try {
-                    if (preload.getAsBoolean()) LOGGER.info("Pre-load successfully executed [collection=" + collection + "].");
-                    else LOGGER.warn("Pre-load executed with errors [collection=" + collection + "].");
-                    future.complete(null);
-                } catch (Exception e) {
-                    future.completeExceptionally(e);
-                }
-            } else future.complete(null);
-        } else future.complete(null);
-        try {
-            future.get(STO_OPERATION_TIMEOUT_SECS, TimeUnit.SECONDS);
-        } catch (InterruptedException | TimeoutException e) {
-            throw new IllegalStateException("Given up to configure collection due to interruption or timeout [collection=" + collection + "].");
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to configure collection [collection=" + collection + "].", e);
+            }
+            // run pre-load operations
+            if (preload != null) {
+                futures.add(CompletableFuture.supplyAsync(() -> preload.getAsBoolean()));
+            }
+            try {
+                CompletableFuture.<Void>allOf(futures.toArray(new CompletableFuture[futures.size()])).get(STO_OPERATION_TIMEOUT_SECS, TimeUnit.SECONDS);
+            } catch (InterruptedException | TimeoutException e) {
+                throw new IllegalStateException("Given up to configure collection due to interruption or timeout [collection=" + collection + "].");
+            } catch (ExecutionException e) {
+                throw new IllegalStateException("Failed to configure collection [collection=" + collection + "].", e);
+            }
         }
     }
 

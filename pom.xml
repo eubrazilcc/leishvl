@@ -107,7 +107,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<embedmongo-maven-plugin.mongodb.version>3.0.5</embedmongo-maven-plugin.mongodb.version>
 		<embedmongo-maven-plugin.download.path>https://fastdl.mongodb.org/</embedmongo-maven-plugin.download.path>
 		<maven-mongodb-plugin.version>1.1.1</maven-mongodb-plugin.version>
-		<maven-mongodb-plugin.mongodb.version>3.0.5</maven-mongodb-plugin.mongodb.version>
+		<maven-mongodb-plugin.mongodb.version>3.0.6</maven-mongodb-plugin.mongodb.version>
 	</properties>
 	
 	<dependencyManagement>
