@@ -5,7 +5,10 @@ import com.google.common.collect.Maps;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.leishvl.core.xml.ncbi.pubmed.PubmedArticle;
+import io.leishvl.storage.base.LeishvlCollection;
 import io.leishvl.storage.base.LeishvlObject;
+import io.leishvl.storage.base.ObjectState;
+import io.leishvl.storage.mongodb.MongoCollectionStats;
 import io.leishvl.storage.security.User;
 import io.leishvl.test.vertx.MoreMatcherAssert;
 import io.vertx.core.*;
@@ -17,24 +20,29 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.TestOptions;
 import io.vertx.ext.unit.TestSuite;
 import io.vertx.ext.unit.report.ReportOptions;
+import org.geojson.FeatureCollection;
 import org.geojson.Point;
 import org.geojson.Polygon;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static com.google.common.collect.Iterables.frequency;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
 import static io.leishvl.core.util.GeoJsons.*;
 import static io.leishvl.core.xml.PubMedXmlBinder.PUBMED_XML_FACTORY;
 import static io.leishvl.storage.base.ObjectState.DRAFT;
+import static io.leishvl.storage.base.ObjectState.RELEASE;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonMapper.JSON_MAPPER;
 import static io.leishvl.storage.mongodb.jackson.MongoJsonOptions.JSON_PRETTY_PRINTER;
 import static io.leishvl.storage.prov.ProvFactory.*;
 import static io.vertx.core.Future.succeededFuture;
+import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.StringUtils.*;
 import static org.hamcrest.CoreMatchers.*;
 
@@ -43,6 +51,8 @@ import static org.hamcrest.CoreMatchers.*;
  * @author Erik Torres <ertorser@upv.es>
  */
 public class CitationCollectionTest {
+
+    public static final int[] EMPTY_ARRAY = {};
 
     public static final boolean VERBOSE = false;
     public static final String BASE_ID = "CITATION_";
@@ -53,9 +63,40 @@ public class CitationCollectionTest {
     public void testSuiteDraftState() {
         final TestOptions options = new TestOptions().addReporter(new ReportOptions().setTo("console").setFormat("simple")).setTimeout(120000l);
         final TestSuite suite = TestSuite.create(CitationCollectionTest.class.getCanonicalName() + "#testSuiteDraftState()");
+        final TestScenario scenario = new TestScenario("TestDraft", TestState.ALL, new ObjectState[] { DRAFT, DRAFT });
 
-        suite.test("test1", context -> {
+        suite.test("search by proximity", context -> {
+            report("Test", "Search by proximity: " + scenario.toString());
+            final MoreMatcherAssert matcher = new MoreMatcherAssert(context);
+            final Point vlc = new CitationFactory().vlcPoint();
+            JsonObject vlcJson = null;
+            try {
+                vlcJson = new JsonObject(JSON_MAPPER.writeValueAsString(vlc));
+            } catch (IOException e) {
+                context.fail(e);
+            }
+            vertx.eventBus().send("get.near.citation", new JsonObject().put("point", vlcJson).put("minDistance", 0.0d).put("maxDistance", 1000000.0d).encode(), ar -> {
+                context.assertTrue(ar.succeeded(), "Near citations were fetched from the database [error=" + ar.cause() + "].");
+                report("Test", "Reply received: " + ar.result().body());
 
+
+
+                // TODO
+            });
+
+
+            /* TODO
+            final FeatureCollection features = op.getNear(ds.vlcPoint, 0.0d, 1000000.0d).get(TIMEOUT, SECONDS);
+            matcher.assertThat("feature collection is not null", features, notNullValue());
+            matcher.assertThat("feature collection list is not null", features.getFeatures(), notNullValue());
+            matcher.assertThat("feature collection list is not empty", features.getFeatures().isEmpty(), equalTo(scenario.numItems() == 0));
+            matcher.assertThat("number of features coincides with expected", features.getFeatures().size(), equalTo(scenario.numItems()));
+            // uncomment for additional output
+            try {
+                report("Test", "Feature collection (geoNear):\n" + objectToJson(features, JSON_PRETTY_PRINTER));
+            } catch (IOException e) {
+                context.fail(e);
+            } */
 
             // TODO
         });
@@ -202,10 +243,21 @@ public class CitationCollectionTest {
                         matcher.assertThat("fetched citation coincides with expected", citation2, equalTo(citation));
                         report("Test", "Fetched citation (" + citation2.getDbId() + "):\n" + citation2.toJson(JSON_PRETTY_PRINTER), false);
 
-                        removeObject(context, "__citation" + citationId);
+                        removeFromDataset(context, "__citation" + citationId);
 
-                        report("Dataset", "created");
-                        async.complete();
+                        // collect statistics about the collection
+                        eb.send("stats", "collection stats", ar4 -> {
+                            context.assertTrue(ar4.succeeded(), "Citations stats were gathered from the database [error=" + ar4.cause() + "].");
+                            report("Test", "Reply received: " + ar4.result().body());
+
+                            final MongoCollectionStats stats = getStats(context, "stats");
+                            matcher.assertThat("collection statistics are not null", stats, notNullValue());
+                            report("Test", "Collection statistics:\n" + stats.toString());
+
+                            // complete operation
+                            report("Dataset", "created");
+                            async.complete();
+                        });
                     });
                 });
             });
@@ -243,7 +295,23 @@ public class CitationCollectionTest {
         return (T)((Map)context.get("dataset")).get(key);
     }
 
-    private void removeObject(final TestContext context, final String key) {
+    private <T extends LeishvlCollection> void putCollection(final TestContext context, final String key, final T collection) {
+        ((Map)context.get("dataset")).put(key, collection);
+    }
+
+    private <T extends LeishvlCollection> T getCollection(final TestContext context, final String key) {
+        return (T)((Map)context.get("dataset")).get(key);
+    }
+
+    private void putStats(final TestContext context, final String key, final MongoCollectionStats stats) {
+        ((Map)context.get("dataset")).put(key, stats);
+    }
+
+    private MongoCollectionStats getStats(final TestContext context, final String key) {
+        return (MongoCollectionStats)((Map)context.get("dataset")).get(key);
+    }
+
+    private void removeFromDataset(final TestContext context, final String key) {
         ((Map)context.get("dataset")).remove(key);
     }
 
@@ -265,14 +333,15 @@ public class CitationCollectionTest {
 
         @Override
         public void start() throws Exception {
-            vertx.eventBus().consumer("create.citation", message -> {
+            final EventBus eb = vertx.eventBus();
+            eb.consumer("create.citation", message -> {
                 report("Verticle", "Received create citation: " + message.body());
                 final int citationId = (Integer) message.body();
                 putObject(context, "citation" + citationId, new CitationFactory().createCitation(context, vertx, citationId));
                 message.reply("Created citation: " + citationId);
                 report("Verticle", "Sent back response to caller: citation created");
             });
-            vertx.eventBus().consumer("insert.citation", message -> {
+            eb.consumer("insert.citation", message -> {
                 report("Verticle", "Received insert citation: " + message.body());
                 final int citationId = (Integer) message.body();
                 getObject(context, "citation" + citationId).save(lookup -> {
@@ -282,7 +351,7 @@ public class CitationCollectionTest {
                     } else message.fail(1, lookup.cause().getMessage());
                 });
             });
-            vertx.eventBus().consumer("fetch.citation", message -> {
+            eb.consumer("fetch.citation", message -> {
                 report("Verticle", "Received fetch citation: " + message.body());
                 final int citationId = (Integer) message.body();
                 putObject(context, "__citation" + citationId, Citation.builder().vertx(vertx).config(config()).leishvlId(BASE_ID + citationId).build());
@@ -291,6 +360,40 @@ public class CitationCollectionTest {
                         message.reply("Citation found: " + citationId);
                         report("Verticle", "Sent back response to caller: citation fetched");
                     } else message.fail(1, lookup.cause().getMessage());
+                });
+            });
+            eb.consumer("get.near.citation", message -> {
+                report("Verticle", "Received get near citation: " + message.body());
+                final JsonObject json = new JsonObject((String) message.body());
+                Point point = null;
+                try {
+                    point = JSON_MAPPER.readValue(json.getJsonObject("point").encode(), Point.class);
+                } catch (IOException e) {
+                    context.fail(e);
+                }
+                putCollection(context, "__citations", new CitationFactory().createCitations(context, vertx));
+                getCollection(context, "__citations").getNear(point, json.getDouble("minDistance"), json.getDouble("maxDistance"), new Handler<AsyncResult<FeatureCollection>>() {
+                    @Override
+                    public void handle(final AsyncResult<FeatureCollection> lookup) {
+                        if (lookup.succeeded()) {
+                            message.reply("Near citations were found");
+                            report("Verticle", "Sent back response to caller: near citation fetched");
+                        } else message.fail(1, lookup.cause().getMessage());
+                    }
+                });
+            });
+            eb.consumer("stats", message -> {
+                report("Verticle", "Received stats: " + message.body());
+                putCollection(context, "__citations", new CitationFactory().createCitations(context, vertx));
+                getCollection(context, "__citations").stats(new Handler<AsyncResult<MongoCollectionStats>>() {
+                    @Override
+                    public void handle(final AsyncResult<MongoCollectionStats> lookup) {
+                        if (lookup.succeeded()) {
+                            putStats(context, "stats", lookup.result());
+                            message.reply("Stats gathered");
+                            report("Verticle", "Sent back response to caller: stats gathered");
+                        } else message.fail(1, lookup.cause().getMessage());
+                    }
                 });
             });
             report("Verticle", "TestVerticle started");
@@ -377,6 +480,82 @@ public class CitationCollectionTest {
             return new Citations(vertx, context.get("dbConfig"));
         }
 
+        public Point vlcPoint() {
+            return vlcPoint;
+        }
+
+    }
+
+    /**
+     * Describes test scenarios.
+     * @author Erik Torres <ertorser@upv.es>
+     */
+    private class TestScenario {
+
+        private final String name;
+        private final TestState state;
+        private final ObjectState[] states;
+
+        public TestScenario(final String name, final TestState state, final ObjectState[] states) {
+            this.name = name;
+            this.state = state;
+            this.states = states;
+        }
+
+        public int total() {
+            return states.length;
+        }
+
+        public int numReleases() {
+            return frequency(asList(states), RELEASE);
+        }
+
+        public int numItems(final Integer... excludes) {
+            return numItems(null, excludes);
+        }
+
+        public int numItems(final int[] stateCount, final Integer... excludes) {
+            int count;
+            switch (state) {
+                case ALL:
+                    count = total() + sum(stateCount) - (excludes != null ? excludes.length : 0);
+                    break;
+                case RELEASES:
+                    count = numReleases() + (stateCount != null ? stateCount[1] : 0) - numExcluded(excludes, RELEASE);
+                    break;
+                default:
+                    throw new IllegalStateException("Unknown test state");
+            }
+            return count;
+        }
+
+        private int numExcluded(final Integer[] excludes, final ObjectState state) {
+            int numExcluded = 0;
+            if (excludes != null) {
+                for (final int pos : excludes) {
+                    numExcluded += (pos < states.length && states[pos].equals(state) ? 1 : 0);
+                }
+            }
+            return numExcluded;
+        }
+
+        private int sum(final int[] stateCount) {
+            return Arrays.stream(stateCount != null ? stateCount : EMPTY_ARRAY).sum();
+        }
+
+        public String toString() {
+            return "[name=" + this.name + ", state=" + this.state + "]";
+        }
+
+    }
+
+    /**
+     * Allowed test states.
+     * @author Erik Torres <ertorser@upv.es>
+     */
+    private enum TestState {
+        ALL,
+        RELEASES
     }
 
 }

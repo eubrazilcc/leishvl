@@ -102,7 +102,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<plugins>
 			<!-- Build -->
 			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>				
+				<artifactId>maven-compiler-plugin</artifactId>
 			</plugin>
 			<!-- JUnit test -->
 			<plugin>

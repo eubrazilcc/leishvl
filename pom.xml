@@ -104,7 +104,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<maven-shade-plugin.version>2.4.1</maven-shade-plugin.version>
 		<maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
 		<embedmongo-maven-plugin.version>0.1.12</embedmongo-maven-plugin.version>
-		<embedmongo-maven-plugin.mongodb.version>3.0.5</embedmongo-maven-plugin.mongodb.version>
+		<embedmongo-maven-plugin.mongodb.version>3.0.6</embedmongo-maven-plugin.mongodb.version>
 		<embedmongo-maven-plugin.download.path>https://fastdl.mongodb.org/</embedmongo-maven-plugin.download.path>
 		<maven-mongodb-plugin.version>1.1.1</maven-mongodb-plugin.version>
 		<maven-mongodb-plugin.mongodb.version>3.0.6</maven-mongodb-plugin.mongodb.version>

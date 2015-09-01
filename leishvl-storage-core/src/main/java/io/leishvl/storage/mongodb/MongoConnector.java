@@ -452,6 +452,11 @@ public class MongoConnector {
                 .put("near", new Document("type", "Point").append("coordinates", new BsonArray(newArrayList(new BsonDouble(longitude), new BsonDouble(latitude)))))
                 .put("distanceField", "_dist.calculated")
                 .build()));
+
+        // TODO
+        System.err.println("\n\n >> GEONEAR: " + geoNear.toJson() + "\n");
+        // TODO
+
         final Bson project = new SimplePipelineStage("$project", fields(include(LEISHVL_ID_FIELD, LEISHVL_LOCATION_FIELD, "_dist")));
         final Bson match = new SimplePipelineStage("$match", gte("_dist.calculated", new BsonDouble(minDistance)));
         final AggregateIterable<Document> iterable = dbcol.aggregate(newArrayList(geoNear, project, match));

@@ -27,6 +27,7 @@ import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
 import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,8 @@ public abstract class CollectionOperatorImpl<T extends LeishvlObject> implements
 
 	@Override
 	public void getNear(final Point point, final double minDistance, final double maxDistance, final Handler<AsyncResult<FeatureCollection>> resultHandler) {
+        requireNonNull(point, "Point expected.");
+        requireNonNull(point.getCoordinates(), "Coordinates expected.");
 		createShared(leishvlCol.vertx, leishvlCol.config).fetchNear(leishvlCol, leishvlCol.getType(), point.getCoordinates().getLongitude(), point.getCoordinates().getLatitude(), 
 				minDistance, maxDistance, excludedStates.orElse(null), resultHandler);
 	}
