@@ -23,14 +23,14 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	
+
 	<groupId>io.leishvl</groupId>
 	<artifactId>leishvl</artifactId>
 	<version>1.0.0</version>
 	<packaging>pom</packaging>
-	
+
 	<name>leishvl</name>
-	<description>Leishmaniasis Virtual Laboratory (LeishVL) main project</description>
+	<description>Leishmaniasis Virtual Laboratory (LeishVL) base project</description>	
 	<url>http://eubrazilcc.github.io/leishvl/</url>
 	
 	<inceptionYear>2014</inceptionYear>
@@ -68,410 +68,63 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<id>antodo</id>
 		</developer>
 	</developers>
-	
+
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.2.7.RELEASE</version>
+		<relativePath /> <!-- lookup parent from repository -->
+	</parent>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
+		<java.version>1.8</java.version>
 		
 		<!-- Convenience properties to set library versions -->
-		<ch.qos.logback.version>1.1.3</ch.qos.logback.version>
-		<com.connexience.esc.version>3.1-SNAPSHOT</com.connexience.esc.version>
-		<com.fasterxml.jackson.version>2.5.3</com.fasterxml.jackson.version> <!-- coincides with Vert.x dependency -->
-		<io.leishvl.version>${project.version}</io.leishvl.version>
-		<io.vertx.version>3.0.0</io.vertx.version> <!-- if you change this, then update Jackson version -->
-		<junit.version>4.12</junit.version> <!-- if you change this, then update Hamcrest version -->
-		<org.antlr.version>4.5.1</org.antlr.version>
-		<org.apache.httpcomponents.version>4.5</org.apache.httpcomponents.version>
-		<org.hamcrest.version>1.3</org.hamcrest.version> <!-- coincides with JUnit dependency -->
-		<org.openprovenance.prov.version>0.7.1</org.openprovenance.prov.version>
-		<org.slf4j.version>1.7.12</org.slf4j.version>
-		<org.mongodb.version>3.0.3</org.mongodb.version>
+		<spring-restdocs-mockmvc.version>1.0.0.RELEASE</spring-restdocs-mockmvc.version>
 		
-		<!-- Convenience properties to set Maven plugins versions -->		
-		<buildnumber-maven-plugin.version>1.3</buildnumber-maven-plugin.version>
-		<exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
+		<!-- Convenience properties to set Maven plugins versions -->
 		<m2e.lifecycle-mapping.version>1.0.0</m2e.lifecycle-mapping.version>
-		<maven-assembly-plugin.version>2.5.4</maven-assembly-plugin.version>
-		<maven-compiler-plugin.version>3.3</maven-compiler-plugin.version>
-		<maven-jar-plugin.version>2.6</maven-jar-plugin.version>
 		<maven-jaxb2-plugin.version>0.12.3</maven-jaxb2-plugin.version>
 		<maven-jaxb2-plugin.jaxb2-commons-lang.version>2.4</maven-jaxb2-plugin.jaxb2-commons-lang.version>
 		<maven-jaxb2-plugin.jaxb2-fluent-api.version>3.0</maven-jaxb2-plugin.jaxb2-fluent-api.version>
-		<maven-failsafe-plugin.version>2.18.1</maven-failsafe-plugin.version>
-		<maven-shade-plugin.version>2.4.1</maven-shade-plugin.version>
-		<maven-surefire-plugin.version>2.18.1</maven-surefire-plugin.version>
-		<embedmongo-maven-plugin.version>0.1.12</embedmongo-maven-plugin.version>
-		<embedmongo-maven-plugin.mongodb.version>3.0.6</embedmongo-maven-plugin.mongodb.version>
-		<embedmongo-maven-plugin.download.path>https://fastdl.mongodb.org/</embedmongo-maven-plugin.download.path>
-		<maven-mongodb-plugin.version>1.1.1</maven-mongodb-plugin.version>
-		<maven-mongodb-plugin.mongodb.version>3.0.6</maven-mongodb-plugin.mongodb.version>
-	</properties>
-	
+	</properties>	
+
 	<dependencyManagement>
-		<dependencies>
-		
-			<!-- Logback logging framework -->
-
-			<dependency> <!-- classic module (uses the SLF4J API) -->
-				<groupId>ch.qos.logback</groupId>
-				<artifactId>logback-classic</artifactId>
-				<version>${ch.qos.logback.version}</version>
-			</dependency>
-			
-			<!-- e-Science Central client API -->
-			
+		<dependencies>		
 			<dependency>
-				<groupId>com.connexience</groupId>
-				<artifactId>api-model</artifactId>
-				<version>${com.connexience.esc.version}</version>
+				<groupId>org.springframework.cloud</groupId>
+				<artifactId>spring-cloud-starter-parent</artifactId>
+				<version>Angel.SR3</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 			
-			<!-- Jackson JSON processor -->
-			
-			<dependency>
-				<groupId>com.fasterxml.jackson.core</groupId>
-				<artifactId>jackson-databind</artifactId>
-				<version>${com.fasterxml.jackson.version}</version>
-			</dependency>
-		
-			<!-- Guava: Google Core Libraries for Java -->
-
-			<dependency>
-				<groupId>com.google.guava</groupId>
-				<artifactId>guava</artifactId>
-				<version>18.0</version>
-			</dependency>
-			<dependency> <!-- JSR305 Annotations from Findbugs -->
-				<groupId>com.google.code.findbugs</groupId>
-				<artifactId>jsr305</artifactId>
-				<version>3.0.0</version>
-			</dependency>
-			
-			<!-- Google Protocol Buffer: a language-neutral, platform-neutral, extensible data serializing framework -->
-			
-			<dependency>
-				<groupId>com.google.protobuf</groupId>
-				<artifactId>protobuf-java</artifactId>
-				<version>2.6.1</version>
-			</dependency>
-			
-			<!-- Configuration library -->
-			
-			<dependency>
-				<groupId>com.typesafe</groupId>
-				<artifactId>config</artifactId>
-				<version>1.3.0</version>
-			</dependency>
-			
-			<!-- GeoJson POJOs For Jackson -->
-			
-			<dependency>
-				<groupId>de.grundid.opendatalab</groupId>
-				<artifactId>geojson-jackson</artifactId>
-				<version>1.5.1</version>
-				<exclusions>
-					<exclusion>
-						<groupId>com.fasterxml.jackson.core</groupId>
-						<artifactId>jackson-core</artifactId>
-					</exclusion>
-					<exclusion>
-						<groupId>com.fasterxml.jackson.core</groupId>
-						<artifactId>jackson-databind</artifactId>
-					</exclusion>
-				</exclusions>
-			</dependency>
-			
-			<!-- Vert.x open-source event-driven application framework and toolkit that runs on the JVM -->
-			
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-core</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-auth-shiro</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-web</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-sockjs</artifactId>
-				<version>${io.vertx.version}-milestone2</version>
-			</dependency>		
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-mail-client</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-hazelcast</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>			
-			<dependency>
-				<groupId>io.vertx</groupId>
-				<artifactId>vertx-unit</artifactId>
-				<version>${io.vertx.version}</version>
-			</dependency>
-			<dependency> <!-- Javassist (JAVA programming ASSISTant) class library for editing bytecodes in Java -->
-				<groupId>org.javassist</groupId>
-				<artifactId>javassist</artifactId>
-				<version>3.20.0-GA</version>
-			</dependency>
-			
-			<!-- The ANTLR 4 Runtime -->
-			
-			<dependency>
-				<groupId>org.antlr</groupId>
-				<artifactId>antlr4-runtime</artifactId>
-				<version>${org.antlr.version}</version>
-			</dependency>			
-		
-			<!-- Apache Commons: Collection of open source reusable Java components -->
-			
-			<dependency> <!-- Wrapper around reflection and introspection -->
-				<groupId>commons-beanutils</groupId>
-				<artifactId>commons-beanutils</artifactId>
-				<version>1.9.2</version>
-			</dependency>
-			
-			<dependency> <!-- Command-line interface utilities -->
-				<groupId>commons-cli</groupId>
-				<artifactId>commons-cli</artifactId>
-				<version>1.3.1</version>
-			</dependency>
-			
-			<dependency> <!-- Apache Commons Daemon software provides an alternative invocation mechanism for UNIX-daemon-like Java code -->
-				<groupId>commons-daemon</groupId>
-				<artifactId>commons-daemon</artifactId>
-				<version>1.0.15</version>
-			</dependency>
-			
+			<!-- Apache Commons: Collection of open source reusable Java components -->			
 			<dependency> <!-- Utility classes for the classes that are considered to be Java standards -->
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-lang3</artifactId>
 				<version>3.4</version>
 			</dependency>
-			
-			<!-- Apache HttpComponents: HTTP/1.1 compliant HTTP agents -->
-
-			<dependency> <!-- HTTP client -->
-				<groupId>org.apache.httpcomponents</groupId>
-				<artifactId>httpclient</artifactId>
-				<version>${org.apache.httpcomponents.version}</version>
-			</dependency>
-			
-			<dependency> <!-- Client fluent API -->
-				<groupId>org.apache.httpcomponents</groupId>
-				<artifactId>fluent-hc</artifactId>
-				<version>${org.apache.httpcomponents.version}</version>
-			</dependency>
-			
-			<!-- Apache Tika: a toolkit for detecting and extracting metadata and 
-				structured text content from various documents using existing parser libraries -->
-
-			<dependency> <!-- core -->
-				<groupId>org.apache.tika</groupId>
-				<artifactId>tika-core</artifactId>
-				<version>1.10</version>
-			</dependency>
-			
-			<!-- MongoDB Java driver -->
-
-			<dependency>
-				<groupId>org.mongodb</groupId>
-				<artifactId>mongodb-driver-async</artifactId>
-				<version>${org.mongodb.version}</version>
-			</dependency>			
-			<dependency> <!-- legacy driver, needed to support GridFS -->
-				<groupId>org.mongodb</groupId>
-				<artifactId>mongo-java-driver</artifactId>
-				<version>${org.mongodb.version}</version>
-			</dependency>
-			
-			<!-- Open Provenance Model (OPM): an implementation of the W3C PROV standard. The 
-				interoperability framework for PROV provides utility methods to write/read 
-				different formats like XML, JSON and conversion to the DOT format for 
-				visualization. Also includes the template system for PROV bundles -->
-			
-			<dependency> 
-				<groupId>org.openprovenance.prov</groupId>
-				<artifactId>prov-interop</artifactId>
-				<version>${org.openprovenance.prov.version}</version>
-			</dependency>
-			
-			<!-- SLF4J logging framework -->
-
-			<dependency> <!-- java.util.logging (jul) bridge -->
-				<groupId>org.slf4j</groupId>
-				<artifactId>jul-to-slf4j</artifactId>
-				<version>${org.slf4j.version}</version>
-			</dependency>
-			
-			<dependency> <!-- Log4j implemented over SLF4J -->
-				<groupId>org.slf4j</groupId>
-				<artifactId>log4j-over-slf4j</artifactId>
-				<version>${org.slf4j.version}</version>
-			</dependency>
-		
-		</dependencies>		
+		</dependencies>
 	</dependencyManagement>
-	
-	<dependencies>
-		<!-- JUnit -->
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>${junit.version}</version>
-			<scope>test</scope>
-		</dependency>
-		
-		<!-- Hamcrest library of matcher implementations that extends the core matcher
-		  transitively included with JUnit -->
-		<dependency>
-		  <groupId>org.hamcrest</groupId>
-		  <artifactId>hamcrest-library</artifactId>
-		  <version>${org.hamcrest.version}</version>
-		  <scope>test</scope>
-        </dependency>
-	</dependencies>
-	
+
 	<build>
 		<pluginManagement>
 			<plugins>
-				<!-- Maven for Eclipse -->
-				<!-- Nothing yet -->
-
-				<!-- Place build time-stamp in jar manifest -->
 				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-jar-plugin</artifactId>
-					<version>${maven-jar-plugin.version}</version>
-					<configuration>
-						<archive>
-							<manifest>
-								<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-							</manifest>
-							<manifestEntries>
-								<Implementation-Build>${buildNumber}</Implementation-Build>
-							</manifestEntries>
-						</archive>
-					</configuration>
-				</plugin>
-				
-				<!-- Build (child projects may override this configuration) -->
-				<plugin>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>${maven-compiler-plugin.version}</version>
-					<configuration>
-						<source>${maven.compiler.source}</source>
-						<target>${maven.compiler.target}</target>
-					</configuration>
-				</plugin>
-				
-				<!-- JUnit test (child projects may override this configuration) -->
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-surefire-plugin</artifactId>
-					<version>${maven-surefire-plugin.version}</version>
-				</plugin>
-				
-				<!-- Configure integration tests (child projects may override this configuration) -->
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-failsafe-plugin</artifactId>
-					<version>${maven-failsafe-plugin.version}</version>
-					<executions>
-						<execution>
-							<id>integration-test</id>
-							<goals>
-								<goal>integration-test</goal>
-								<goal>verify</goal>
-							</goals>
-						</execution>
-					</executions>
-				</plugin>				
-				<plugin> <!-- MongoDB database -->
-					<groupId>com.github.joelittlejohn.embedmongo</groupId>
-					<artifactId>embedmongo-maven-plugin</artifactId>
-					<version>${embedmongo-maven-plugin.version}</version>
-				</plugin>
-				<plugin> <!-- MongoDB database -->
-					<groupId>com.syncleus.maven.plugins</groupId>
-					<artifactId>maven-mongodb-plugin</artifactId>
-					<version>${maven-mongodb-plugin.version}</version>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-maven-plugin</artifactId>
 				</plugin>
 			</plugins>
 		</pluginManagement>
-
-		<plugins>
-			<!-- Build time-stamp -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>buildnumber-maven-plugin</artifactId>
-				<version>${buildnumber-maven-plugin.version}</version>
-				<configuration>
-					<format>{0,date,yyyy-MM-dd HH:mm:ss}</format>
-					<items>
-						<item>timestamp</item>
-					</items>
-					<revisionOnScmFailure>unknown</revisionOnScmFailure>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>validate</phase>
-						<goals>
-							<goal>create</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<!-- Install dependencies not found in public repositories -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
-				<version>${exec-maven-plugin.version}</version>
-				<inherited>false</inherited>
-				<executions>
-					<execution> <!-- e-Science Central -->
-						<id>install-e-science-central</id>
-						<phase>validate</phase>
-						<goals>
-							<goal>exec</goal>
-						</goals>
-						<configuration>
-							<executable>mvn</executable>
-							<arguments>
-								<argument>install:install-file</argument>
-								<argument>-Dfile=external-deps/api-model-${com.connexience.esc.version}.jar</argument>
-								<argument>-DgroupId=com.connexience</argument>
-								<argument>-DartifactId=api-model</argument>
-								<argument>-Dversion=${com.connexience.esc.version}</argument>
-								<argument>-Dpackaging=jar</argument>
-							</arguments>
-						</configuration>
-					</execution>					
-				</executions>
-			</plugin>
-		</plugins>
 	</build>
-	
+
 	<modules>
-		<module>leishvl-test-tools</module>
 		<module>leishvl-core</module>
-		<module>leishvl-storage-core</module>
-		<module>leishvl-microservices-core</module>
-		<module>leishvl-collection</module>
-		<module>leishvl-drive</module>
-		<module>leishvl-ui</module>
+		<module>leishvl-service-sequences</module>
 	</modules>
 	
 </project>
