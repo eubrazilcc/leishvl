@@ -34,7 +34,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<name>leishvl-core</name>
 	<description>Provides core components, such as database connectors, data formats and clients needed to access external projects.</description>
 	<url>http://eubrazilcc.github.io/leishvl/</url>
-	
+		
 	<dependencies>
 		<!-- Apache commons -->
 		<dependency>
@@ -126,7 +126,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</goals>
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/esearch</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/esearch</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/esearch</generateDirectory>
 									<generatePackage>io.leishvl.ncbi.esearch</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
@@ -151,7 +151,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</goals>
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/genbank</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/genbank</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/genbank</generateDirectory>
 									<generatePackage>io.leishvl.ncbi.gb</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
@@ -176,7 +176,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</goals>
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/pubmed</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/pubmed</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/pubmed</generateDirectory>
 									<generatePackage>io.leishvl.ncbi.pubmed</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
@@ -201,7 +201,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</goals>
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/taxonomy</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/taxonomy</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/taxonomy</generateDirectory>
 									<generatePackage>io.leishvl.ncbi.taxonomy</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
@@ -230,7 +230,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 										<include>tapir-binding.xjb</include>
 									</bindingIncludes>
 									<schemaDirectory>${project.basedir}/src/main/schema/tapir</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/tapir</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/tapir</generateDirectory>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>XMLSCHEMA</schemaLanguage>
@@ -258,7 +258,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 										<include>dwc-binding.xjb</include>
 									</bindingIncludes>
 									<schemaDirectory>${project.basedir}/src/main/schema/dwc</schemaDirectory>
-									<generateDirectory>${project.build.directory}/generated-sources/dwc</generateDirectory>
+									<generateDirectory>${project.basedir}/src/main/generated-sources/dwc</generateDirectory>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>XMLSCHEMA</schemaLanguage>
@@ -296,12 +296,12 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 						</goals>
 						<configuration>
 							<sources>
-								<source>${project.build.directory}/generated-sources/esearch</source>
-								<source>${project.build.directory}/generated-sources/genbank</source>
-								<source>${project.build.directory}/generated-sources/pubmed</source>
-								<source>${project.build.directory}/generated-sources/taxonomy</source>
-								<source>${project.build.directory}/generated-sources/tapir</source>
-								<source>${project.build.directory}/generated-sources/dwc</source>
+								<source>${project.basedir}/src/main/generated-sources/esearch</source>
+								<source>${project.basedir}/src/main/generated-sources/genbank</source>
+								<source>${project.basedir}/src/main/generated-sources/pubmed</source>
+								<source>${project.basedir}/src/main/generated-sources/taxonomy</source>
+								<source>${project.basedir}/src/main/generated-sources/tapir</source>
+								<source>${project.basedir}/src/main/generated-sources/dwc</source>
 							</sources>
 						</configuration>
 					</execution>
