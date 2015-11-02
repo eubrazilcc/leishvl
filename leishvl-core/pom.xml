@@ -41,6 +41,48 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 		</dependency>
+		
+		<!-- Google Guava common libraries for Java -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+		</dependency>
+		<dependency> <!-- JSR305 Annotations from Findbugs -->
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>jsr305</artifactId>
+		</dependency>
+		
+		<!-- Jackson JSON processor -->			
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- Open Provenance Model (OPM) -->			
+		<dependency> 
+			<groupId>org.openprovenance.prov</groupId>
+			<artifactId>prov-interop</artifactId>
+		</dependency>
+		
+		<!-- Spring Framework -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-mongodb</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		
+		<!-- Embedded MongoDB -->		
+		<dependency>
+    		<groupId>de.flapdoodle.embed</groupId>
+    		<artifactId>de.flapdoodle.embed.mongo</artifactId>
+    		<scope>test</scope>
+		</dependency>		
 	</dependencies>
 
 	<profiles>
@@ -304,6 +346,37 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								<source>${project.basedir}/src/main/generated-sources/dwc</source>
 							</sources>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>com.syncleus.maven.plugins</groupId>
+				<artifactId>maven-mongodb-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>start</id>
+						<goals>
+							<goal>start</goal>
+						</goals>
+						<configuration>
+							<port>27017</port>
+							<version>${maven-mongodb-plugin.mongodb.version}</version>
+							<databaseDirectory>/tmp/mongotest</databaseDirectory>
+							<logging>file</logging>
+							<logFile>${project.build.directory}/myfile.log</logFile>
+							<logFileEncoding>utf-8</logFileEncoding>
+							<bindIp>127.0.0.1</bindIp>
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<goals>
+							<goal>stop</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

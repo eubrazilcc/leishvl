@@ -72,8 +72,8 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>1.2.7.RELEASE</version>
-		<relativePath /> <!-- lookup parent from repository -->
+		<version>1.3.0.RC1</version>
+		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
 	<properties>
@@ -83,23 +83,27 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<java.version>1.8</java.version>
 		
 		<!-- Convenience properties to set library versions -->
-		<spring-restdocs-mockmvc.version>1.0.0.RELEASE</spring-restdocs-mockmvc.version>
+		<org.openprovenance.prov.version>0.7.2</org.openprovenance.prov.version>
+		<spring-restdocs-mockmvc.version>1.0.0.RC1</spring-restdocs-mockmvc.version>
 		
 		<!-- Convenience properties to set Maven plugins versions -->
 		<m2e.lifecycle-mapping.version>1.0.0</m2e.lifecycle-mapping.version>
 		<maven-jaxb2-plugin.version>0.12.3</maven-jaxb2-plugin.version>
 		<maven-jaxb2-plugin.jaxb2-commons-lang.version>2.4</maven-jaxb2-plugin.jaxb2-commons-lang.version>
 		<maven-jaxb2-plugin.jaxb2-fluent-api.version>3.0</maven-jaxb2-plugin.jaxb2-fluent-api.version>
-	</properties>	
+		<maven-mongodb-plugin.version>1.1.1</maven-mongodb-plugin.version>
+		<maven-mongodb-plugin.mongodb.version>3.0.7</maven-mongodb-plugin.mongodb.version>
+	</properties>
 
 	<dependencyManagement>
-		<dependencies>		
+		<dependencies>
+			<!-- Spring Boot -->
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-starter-parent</artifactId>
-				<version>Angel.SR3</version>
+				<version>Brixton.M1</version>
 				<type>pom</type>
-				<scope>import</scope>
+				<scope>import</scope>				
 			</dependency>
 			
 			<!-- Apache Commons: Collection of open source reusable Java components -->			
@@ -108,8 +112,32 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<artifactId>commons-lang3</artifactId>
 				<version>3.4</version>
 			</dependency>
+			
+			<!-- Google Guava core libraries for Java -->
+			<dependency> <!-- JSR305 Annotations from Findbugs -->
+				<groupId>com.google.code.findbugs</groupId>
+				<artifactId>jsr305</artifactId>
+				<version>3.0.0</version>
+			</dependency>
+			
+			<!-- Spring Factory Bean for Embedded MongoDB -->
+			<dependency>
+    			<groupId>cz.jirutka.spring</groupId>
+    			<artifactId>embedmongo-spring</artifactId>
+    			<version>1.3.1</version>
+			</dependency>
+			
+			<!-- Open Provenance Model (OPM): an implementation of the W3C PROV standard. The 
+				interoperability framework for PROV provides utility methods to write/read 
+				different formats like XML, JSON and conversion to the DOT format for 
+				visualization. Also includes the template system for PROV bundles -->			
+			<dependency> 
+				<groupId>org.openprovenance.prov</groupId>
+				<artifactId>prov-interop</artifactId>
+				<version>${org.openprovenance.prov.version}</version>
+			</dependency>					
 		</dependencies>
-	</dependencyManagement>
+	</dependencyManagement>	
 
 	<build>
 		<pluginManagement>
@@ -118,9 +146,65 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					<groupId>org.springframework.boot</groupId>
 					<artifactId>spring-boot-maven-plugin</artifactId>
 				</plugin>
-			</plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-failsafe-plugin</artifactId>
+					<version>${maven-failsafe-plugin.version}</version>
+					<executions>
+						<execution>
+							<id>integration-test</id>
+							<goals>
+								<goal>integration-test</goal>
+								<goal>verify</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>				
+				<plugin> <!-- Embedded MongoDB Maven Plugin -->
+					<groupId>com.syncleus.maven.plugins</groupId>
+					<artifactId>maven-mongodb-plugin</artifactId>
+					<version>${maven-mongodb-plugin.version}</version>
+				</plugin>
+			</plugins>			
 		</pluginManagement>
 	</build>
+	
+	<repositories>
+		<repository>
+			<id>spring-snapshots</id>
+			<name>Spring Snapshots</name>
+			<url>https://repo.spring.io/snapshot</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+		<repository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestone</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-snapshots</id>
+			<name>Spring Snapshots</name>
+			<url>https://repo.spring.io/snapshot</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</pluginRepository>
+		<pluginRepository>
+			<id>spring-milestones</id>
+			<name>Spring Milestones</name>
+			<url>https://repo.spring.io/milestone</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</pluginRepository>
+	</pluginRepositories>
 
 	<modules>
 		<module>leishvl-core</module>
