@@ -25,7 +25,7 @@ package io.leishvl.core;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.collect.Maps.newHashMap;
 import static io.leishvl.core.LeishvlObjectState.DRAFT;
-import static io.leishvl.geospatial.GeoJsons.POINT_FUZZY_EQUALS;
+import static io.leishvl.core.geospatial.GeoJsons.POINT_FUZZY_EQUALS;
 import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.lang3.RandomStringUtils.random;
@@ -46,11 +46,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import io.leishvl.jackson.JsonOptions;
-import io.leishvl.jackson.JsonProcessor;
-
 /**
  * Classes should extend this class to support common features of the LeishVL, such as geolocalization (an optional GeoJSON point can be
  * included to georeference the object) and provenance (implementing W3C PROV). In addition, a database identifier is provided, as well 
@@ -63,9 +58,6 @@ public abstract class LeishvlObject {
 
 	@Transient
 	protected final Logger logger;
-
-	@Transient
-	private JsonProcessor jsonProcessor;
 
 	@Id
 	private String id;
@@ -179,21 +171,6 @@ public abstract class LeishvlObject {
 		} else {
 			this.references.clear();
 		}
-	}
-
-	/**
-	 * Returns a String containing the attributes of each element loaded in the current view.
-	 * @param options - JSON parser options
-	 * @return a String containing the attributes of each element loaded in the current view
-	 */
-	public String toJson(final JsonOptions... options) {
-		String payload = "";
-		try {
-			payload = jsonProcessor.objectToJson(this, options);
-		} catch (final JsonProcessingException e) {
-			logger.error("Failed to export object to JSON", e);
-		}
-		return payload;
 	}
 
 	@Override

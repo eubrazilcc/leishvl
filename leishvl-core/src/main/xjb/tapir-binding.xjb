@@ -2,27 +2,27 @@
 <jxb:bindings xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:jxb="http://java.sun.com/xml/ns/jaxb" version="2.1">
 	<jxb:bindings schemaLocation="../schema/tapir/tdwg_tapir.xsd" node="/xs:schema">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.tapir" />
+			<jxb:package name="io.leishvl.core.tapir" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 	<jxb:bindings scd="x-schema::dc" xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.tapir.dc.elements" />
+			<jxb:package name="io.leishvl.core.tapir.dc.elements" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 	<jxb:bindings scd="x-schema::dct" xmlns:dct="http://purl.org/dc/terms/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.tapir.dc.terms" />
+			<jxb:package name="io.leishvl.core.tapir.dc.terms" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 	<jxb:bindings scd="x-schema::geo" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.tapir.geo" />
+			<jxb:package name="io.leishvl.core.tapir.geo" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 	<jxb:bindings scd="x-schema::vcard" xmlns:vcard="http://www.w3.org/2001/vcard-rdf/3.0#">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.tapir.vcard" />
+			<jxb:package name="io.leishvl.core.tapir.vcard" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 </jxb:bindings>

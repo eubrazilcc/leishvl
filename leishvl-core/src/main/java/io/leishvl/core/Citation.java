@@ -29,7 +29,7 @@ import java.util.Objects;
 
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import io.leishvl.ncbi.pubmed.PubmedArticle;
+import io.leishvl.core.ncbi.pubmed.PubmedArticle;
 
 /**
  * Represents a publication citation, including the original PubMed article and additional annotations provided by the LeishVL users.

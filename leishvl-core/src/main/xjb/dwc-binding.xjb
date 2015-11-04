@@ -2,22 +2,22 @@
 <jxb:bindings xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:jxb="http://java.sun.com/xml/ns/jaxb" version="2.1">
 	<jxb:bindings scd="x-schema::dwr" xmlns:dwr="http://rs.tdwg.org/dwc/xsd/simpledarwincore/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.dwc.simple" />
+			<jxb:package name="io.leishvl.core.dwc.simple" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 	<jxb:bindings scd="x-schema::dcterms" xmlns:dcterms="http://purl.org/dc/terms/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.dwc.dc.terms" />
+			<jxb:package name="io.leishvl.core.dwc.dc.terms" />
 		</jxb:schemaBindings>
 	</jxb:bindings>	
 	<jxb:bindings scd="x-schema::dwc" xmlns:dwc="http://rs.tdwg.org/dwc/terms/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.dwc.terms" />
+			<jxb:package name="io.leishvl.core.dwc.terms" />
 		</jxb:schemaBindings>
 	</jxb:bindings>	
 	<jxb:bindings scd="x-schema::dc" xmlns:dc="http://purl.org/dc/elements/1.1/">
 		<jxb:schemaBindings>
-			<jxb:package name="io.leishvl.dwc.dc.elements" />
+			<jxb:package name="io.leishvl.core.dwc.dc.elements" />
 		</jxb:schemaBindings>
 	</jxb:bindings>
 </jxb:bindings>

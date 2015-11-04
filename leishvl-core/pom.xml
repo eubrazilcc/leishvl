@@ -175,7 +175,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/esearch</schemaDirectory>
 									<generateDirectory>${project.basedir}/src/main/generated-sources/esearch</generateDirectory>
-									<generatePackage>io.leishvl.ncbi.esearch</generatePackage>
+									<generatePackage>io.leishvl.core.ncbi.esearch</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>DTD</schemaLanguage>
@@ -200,7 +200,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/genbank</schemaDirectory>
 									<generateDirectory>${project.basedir}/src/main/generated-sources/genbank</generateDirectory>
-									<generatePackage>io.leishvl.ncbi.gb</generatePackage>
+									<generatePackage>io.leishvl.core.ncbi.gb</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>DTD</schemaLanguage>
@@ -225,7 +225,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/pubmed</schemaDirectory>
 									<generateDirectory>${project.basedir}/src/main/generated-sources/pubmed</generateDirectory>
-									<generatePackage>io.leishvl.ncbi.pubmed</generatePackage>
+									<generatePackage>io.leishvl.core.ncbi.pubmed</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>DTD</schemaLanguage>
@@ -250,7 +250,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								<configuration>
 									<schemaDirectory>${project.basedir}/src/main/dtd/taxonomy</schemaDirectory>
 									<generateDirectory>${project.basedir}/src/main/generated-sources/taxonomy</generateDirectory>
-									<generatePackage>io.leishvl.ncbi.taxonomy</generatePackage>
+									<generatePackage>io.leishvl.core.ncbi.taxonomy</generatePackage>
 									<extension>true</extension>
 									<episode>false</episode>
 									<schemaLanguage>DTD</schemaLanguage>
@@ -324,7 +324,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</configuration>
 							</execution>
 						</executions>
-					</plugin>					
+					</plugin>
 				</plugins>
 			</build>
 		</profile>
