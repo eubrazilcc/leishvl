@@ -65,7 +65,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<artifactId>prov-interop</artifactId>
 		</dependency>
 		
-		<!-- Spring Framework -->
+		<!-- Spring Boot -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
@@ -73,16 +73,16 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
+			<artifactId>spring-boot-starter-test</artifactId>			
+			<scope>test</scope>			
 		</dependency>
 		
-		<!-- Embedded MongoDB -->		
+		<!-- Embedded MongoDB -->
 		<dependency>
-    		<groupId>de.flapdoodle.embed</groupId>
+			<groupId>de.flapdoodle.embed</groupId>
     		<artifactId>de.flapdoodle.embed.mongo</artifactId>
     		<scope>test</scope>
-		</dependency>		
+		</dependency>
 	</dependencies>
 
 	<profiles>
@@ -92,8 +92,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<build>
 				<pluginManagement>
 					<plugins>
-						<!-- Do not generate XML binding classes from Eclipse to prevent version system to update the 
-							version of the library -->
+						<!-- Eclipse Maven Plugin -->
 						<plugin>
 							<groupId>org.eclipse.m2e</groupId>
 							<artifactId>lifecycle-mapping</artifactId>
@@ -101,6 +100,8 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 							<configuration>
 								<lifecycleMappingMetadata>
 									<pluginExecutions>
+										<!-- Do not generate XML binding classes from Eclipse, avoiding that a new version of the classes is generated,
+											thus preventing useless updates of the source code repository -->
 										<pluginExecution>
 											<pluginExecutionFilter>
 												<groupId>org.jvnet.jaxb2.maven2</groupId>
@@ -114,6 +115,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 												<ignore />
 											</action>
 										</pluginExecution>
+										<!-- Add the generated classes to the class-path of the Eclipse project -->
 										<pluginExecution>
 											<pluginExecutionFilter>
 												<groupId>org.codehaus.mojo</groupId>
@@ -326,6 +328,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 
 	<build>
 		<plugins>
+			<!-- Add the generated classes to the class-path -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
@@ -349,37 +352,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					</execution>
 				</executions>
 			</plugin>
+			<!-- Spring Boot Maven Plugin -->
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-			<plugin>
-				<groupId>com.syncleus.maven.plugins</groupId>
-				<artifactId>maven-mongodb-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>start</id>
-						<goals>
-							<goal>start</goal>
-						</goals>
-						<configuration>
-							<port>27017</port>
-							<version>${maven-mongodb-plugin.mongodb.version}</version>
-							<databaseDirectory>/tmp/mongotest</databaseDirectory>
-							<logging>file</logging>
-							<logFile>${project.build.directory}/myfile.log</logFile>
-							<logFileEncoding>utf-8</logFileEncoding>
-							<bindIp>127.0.0.1</bindIp>
-						</configuration>
-					</execution>
-					<execution>
-						<id>stop</id>
-						<goals>
-							<goal>stop</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+			</plugin>			   
 		</plugins>
 	</build>
 	

@@ -20,7 +20,7 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.test;
+package io.leishvl.config;
 
 import static io.leishvl.data.mongodb.GeoJsonConverters.getGeoJsonConvertersToRegister;
 import static io.leishvl.data.mongodb.ProvConverters.getProvConvertersToRegister;
@@ -31,6 +31,7 @@ import java.net.UnknownHostException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.config.AbstractMongoConfiguration;
 import org.springframework.data.mongodb.core.SimpleMongoDbFactory;
@@ -44,20 +45,23 @@ import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 
+import io.leishvl.data.CitationRepository;
+
 /**
  * Spring configuration.
  * @author Erik Torres <ertorser@upv.es>
  */
 @Configuration
-@EnableMongoRepositories(basePackages = "io.leishvl.data")
-public class IntegrationTestApplicationConfig extends AbstractMongoConfiguration {
+@Profile("database")
+@EnableMongoRepositories(basePackageClasses={ CitationRepository.class })
+public class LeishvlMongoConfiguration extends AbstractMongoConfiguration {
 
 	@Autowired
 	private Environment env;
 
 	@Override
 	public String getDatabaseName() {
-		return env.getRequiredProperty("mongo.db.name");
+		return env.getRequiredProperty("spring.data.mongodb.database");
 	}
 
 	@Override
@@ -67,7 +71,7 @@ public class IntegrationTestApplicationConfig extends AbstractMongoConfiguration
 
 	@Bean
 	protected MongoClient mongoClient() throws UnknownHostException {
-		return new MongoClient(new MongoClientURI("mongodb://127.0.0.1:27017/" + getDatabaseName()));
+		return new MongoClient(new MongoClientURI(env.getRequiredProperty("spring.data.mongodb.uri")));
 	}
 
 	@Override

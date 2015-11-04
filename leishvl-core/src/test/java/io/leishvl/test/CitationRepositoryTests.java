@@ -24,11 +24,11 @@ package io.leishvl.test;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static io.leishvl.core.LeishvlObjectState.DRAFT;
+import static io.leishvl.jackson.JsonOptions.JSON_PRETTY_PRINTER;
 import static io.leishvl.prov.ProvFactory.newGeocoding;
 import static io.leishvl.prov.ProvFactory.newObjectImportProv;
 import static io.leishvl.prov.ProvFactory.newPubMedArticle;
 import static io.leishvl.xml.PubMedXmlBinder.PUBMED_XML_FACTORY;
-import static io.leishvl.jackson.JsonOptions.JSON_PRETTY_PRINTER;
 
 import java.util.List;
 
@@ -41,6 +41,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.geo.GeoJsonPolygon;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.google.common.collect.ImmutableList;
@@ -58,6 +59,7 @@ import io.leishvl.ncbi.pubmed.PubmedArticle;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringApplicationConfiguration(classes = { IntegrationTestApplication.class })
+@TestPropertySource(locations = { "classpath:test.properties" })
 @IntegrationTest
 public class CitationRepositoryTests {
 

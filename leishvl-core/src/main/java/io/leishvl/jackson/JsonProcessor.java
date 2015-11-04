@@ -44,7 +44,7 @@ public enum JsonProcessor {
 		// apply general configuration
 		OBJECT_MAPPER.setSerializationInclusion(Include.NON_NULL);
 		OBJECT_MAPPER.setSerializationInclusion(Include.NON_EMPTY);
-		OBJECT_MAPPER.setSerializationInclusion(Include.NON_DEFAULT);		
+		// OBJECT_MAPPER.setSerializationInclusion(Include.NON_DEFAULT);
 	}	
 
 	public static final String objectToJson(final Object obj, final JsonOptions... options) throws JsonProcessingException {

@@ -25,12 +25,16 @@ package io.leishvl.test;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
+
+import io.leishvl.config.LeishvlMongoConfiguration;
 
 /**
  * Spring application for use in integration tests.
  * @author Erik Torres <ertorser@upv.es>
  */
 @SpringBootApplication
+@Import(value={ LeishvlMongoConfiguration.class })
 public class IntegrationTestApplication implements CommandLineRunner {
 
 	public static void main(final String[] args) {

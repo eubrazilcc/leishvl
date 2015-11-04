@@ -93,7 +93,7 @@ public class ProvConverters {
 			// write map to JSON using Gson
 			final Type typeOfMap = new TypeToken<Map<String, Object>>(){}.getType();
 			final String json = new Gson().toJson(map, typeOfMap);
-			// unescape MongoDB special characters and create a W3C PROV document using the interoperanility framework
+			// unescape MongoDB special characters and create a W3C PROV document using the interoperability framework
 			final String unescaped = UDOLLAR_PATTERN.matcher(json).replaceAll(UDOLLAR_REPLACEMENT);
 			return new InteropFramework().readDocument(new ByteArrayInputStream(unescaped.getBytes()), ProvFormat.JSON, null);			
 		}
