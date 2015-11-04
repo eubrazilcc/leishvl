@@ -20,38 +20,40 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.jackson;
+package io.leishvl.config;
 
-import static io.leishvl.jackson.JsonOptions.JSON_PRETTY_PRINTER;
-import static java.util.Arrays.asList;
-import static java.util.Optional.ofNullable;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+
+import io.leishvl.jackson.JsonProcessor;
 
 /**
- * Binds Java objects to/from JSON using the Jackson JSON processor.
+ * Spring configuration for Jackson JSON processor.
  * @author Erik Torres <ertorser@upv.es>
  */
-@Configurable
-public class JsonProcessor {
+@Configuration
+@Profile("data")
+public class JacksonConfiguration {
 
-	@Autowired
-	private ObjectMapper objectMapper;
-
-	public String objectToJson(final Object obj, final JsonOptions... options) throws JsonProcessingException {
-		final boolean pretty = asList(ofNullable(options)
-				.orElse(new JsonOptions[]{}))
-				.contains(JSON_PRETTY_PRINTER);
-
-		// TODO
-		System.err.println("\n\n >> HERE: " + objectMapper + "\n");
-		// TODO
-
-		return !pretty ? objectMapper.writeValueAsString(obj) : objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj);		
+	@Bean @Primary
+	public ObjectMapper objectMapper() {
+		return new ObjectMapper()
+				.setSerializationInclusion(Include.NON_NULL)
+				.setSerializationInclusion(Include.NON_EMPTY)
+				.setSerializationInclusion(Include.NON_ABSENT)
+				.registerModule(new Jdk8Module());
+	}
+	
+	@Bean @Lazy
+	public JsonProcessor jsonProcessor() {
+		return new JsonProcessor();
 	}
 
 }

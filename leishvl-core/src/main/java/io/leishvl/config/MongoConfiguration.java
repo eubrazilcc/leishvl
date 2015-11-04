@@ -39,22 +39,25 @@ import org.springframework.data.mongodb.core.convert.CustomConversions;
 import org.springframework.data.mongodb.core.convert.DbRefResolver;
 import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
+import org.springframework.data.mongodb.core.mapping.event.BeforeConvertEvent;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 import com.mongodb.Mongo;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 
+import io.leishvl.core.LeishvlObject;
 import io.leishvl.data.CitationRepository;
 
 /**
- * Spring configuration.
+ * Spring configuration for MongoDB database.
  * @author Erik Torres <ertorser@upv.es>
  */
 @Configuration
-@Profile("database")
+@Profile("data")
 @EnableMongoRepositories(basePackageClasses={ CitationRepository.class })
-public class LeishvlMongoConfiguration extends AbstractMongoConfiguration {
+public class MongoConfiguration extends AbstractMongoConfiguration {
 
 	@Autowired
 	private Environment env;
@@ -94,6 +97,16 @@ public class LeishvlMongoConfiguration extends AbstractMongoConfiguration {
 		converter.setCustomConversions(customConversions());
 		converter.setMapKeyDotReplacement("\\+");
 		return converter;
+	}
+	
+	@Bean
+	public AbstractMongoEventListener<LeishvlObject> mongoEventListener() {
+		return new AbstractMongoEventListener<LeishvlObject>() {
+			@Override
+			public void onBeforeConvert(final BeforeConvertEvent<LeishvlObject> event) {
+				// TODO event.getSource()
+			}
+		};
 	}
 
 }

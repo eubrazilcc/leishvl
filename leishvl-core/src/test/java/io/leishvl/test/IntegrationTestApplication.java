@@ -27,14 +27,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
-import io.leishvl.config.LeishvlMongoConfiguration;
+import io.leishvl.config.JacksonConfiguration;
+import io.leishvl.config.MongoConfiguration;
 
 /**
  * Spring application for use in integration tests.
  * @author Erik Torres <ertorser@upv.es>
  */
 @SpringBootApplication
-@Import(value={ LeishvlMongoConfiguration.class })
+@Import(value={ JacksonConfiguration.class, MongoConfiguration.class })
 public class IntegrationTestApplication implements CommandLineRunner {
 
 	public static void main(final String[] args) {

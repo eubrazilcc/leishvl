@@ -58,6 +58,10 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<artifactId>jackson-databind</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jdk8</artifactId>
+		</dependency>
 		
 		<!-- Open Provenance Model (OPM) -->			
 		<dependency> 
