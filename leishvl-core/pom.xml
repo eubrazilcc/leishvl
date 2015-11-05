@@ -87,12 +87,22 @@ that you distribute must include a readable copy of the "NOTICE" text file.
     		<artifactId>de.flapdoodle.embed.mongo</artifactId>
     		<scope>test</scope>
 		</dependency>
+		
+		<!-- LeishVL testing utilities -->
+		<dependency>
+			<groupId>io.leishvl</groupId>
+			<artifactId>leishvl-test</artifactId>
+			<version>${io.leishvl.version}</version>
+		</dependency>
 	</dependencies>
 
 	<profiles>
 		<!-- Generate XML binding classes -->
 		<profile>
 			<id>generate</id>
+			<properties>
+				<testcase.groups></testcase.groups>
+			</properties>
 			<build>
 				<pluginManagement>
 					<plugins>
@@ -328,6 +338,21 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				</plugins>
 			</build>
 		</profile>
+		<profile>
+			<id>all-tests</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<testcase.groups>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests,io.leishvl.test.category.IntegrationTests</testcase.groups>
+			</properties>
+		</profile>
+		<profile>
+			<id>light-tests</id>
+			<properties>
+				<testcase.groups>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests</testcase.groups>
+			</properties>
+		</profile>		
 	</profiles>
 
 	<build>
@@ -360,7 +385,28 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>			   
+			</plugin>
+			<!-- Maven Surefire Plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<dependencies>					
+					<dependency> <!-- SureFire JUnitCore (JUnit 4.7+) Runner -->
+						<groupId>org.apache.maven.surefire</groupId>
+						<artifactId>surefire-junit47</artifactId>
+						<version>${maven-surefire-plugin.version}</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<groups>${testcase.groups}</groups>
+					<excludes>
+						<exclude>${exclude.tests}</exclude>
+					</excludes>
+					<includes>
+						<include>${include.tests}</include>
+					</includes>
+				</configuration>				
+			</plugin>			
 		</plugins>
 	</build>
 	

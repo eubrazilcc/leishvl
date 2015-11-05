@@ -80,10 +80,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		
-		<java.version>1.8</java.version>
-		<embed.mongodb.version>3.0.7</embed.mongodb.version>
+		<java.version>1.8</java.version>		
 		
 		<!-- Convenience properties to set library versions -->
+		<embed.mongodb.version>3.0.7</embed.mongodb.version>
+		<io.leishvl.version>${project.version}</io.leishvl.version>
 		<org.openprovenance.prov.version>0.7.2</org.openprovenance.prov.version>
 		<spring-restdocs-mockmvc.version>1.0.0.RC1</spring-restdocs-mockmvc.version>
 		
@@ -91,7 +92,8 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<m2e.lifecycle-mapping.version>1.0.0</m2e.lifecycle-mapping.version>
 		<maven-jaxb2-plugin.version>0.12.3</maven-jaxb2-plugin.version>
 		<maven-jaxb2-plugin.jaxb2-commons-lang.version>2.4</maven-jaxb2-plugin.jaxb2-commons-lang.version>
-		<maven-jaxb2-plugin.jaxb2-fluent-api.version>3.0</maven-jaxb2-plugin.jaxb2-fluent-api.version>	
+		<maven-jaxb2-plugin.jaxb2-fluent-api.version>3.0</maven-jaxb2-plugin.jaxb2-fluent-api.version>
+		<maven-surefire-plugin.version>2.19</maven-surefire-plugin.version>
 	</properties>
 
 	<dependencyManagement>
@@ -139,6 +141,12 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					<groupId>org.springframework.boot</groupId>
 					<artifactId>spring-boot-maven-plugin</artifactId>
 				</plugin>
+				<!-- Maven Surefire Plugin -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven-surefire-plugin.version}</version>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>
@@ -181,8 +189,9 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	</pluginRepositories>
 
 	<modules>
+		<module>leishvl-test</module>
 		<module>leishvl-core</module>
-		<module>leishvl-service-sequences</module>
+		<module>leishvl-service-sequences</module>		
 	</modules>
 	
 </project>

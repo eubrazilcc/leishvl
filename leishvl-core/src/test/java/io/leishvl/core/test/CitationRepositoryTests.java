@@ -33,6 +33,7 @@ import static io.leishvl.core.xml.PubMedXmlBinder.PUBMED_XML_FACTORY;
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.IntegrationTest;
@@ -53,6 +54,7 @@ import io.leishvl.core.LeishvlArticle;
 import io.leishvl.core.data.CitationRepository;
 import io.leishvl.core.jackson.JsonProcessor;
 import io.leishvl.core.ncbi.pubmed.PubmedArticle;
+import io.leishvl.test.category.IntegrationTests;
 
 /**
  * Tests {@link CitationRepository} class.
@@ -110,7 +112,7 @@ public class CitationRepositoryTests {
 
 	private @Autowired CitationRepository repository;
 
-	@Test
+	@Test @Category(IntegrationTests.class)
 	public void readsFirstPageCorrectly() {
 		repository.deleteAll();
 
