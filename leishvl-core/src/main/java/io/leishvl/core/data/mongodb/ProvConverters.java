@@ -22,20 +22,14 @@
 
 package io.leishvl.core.data.mongodb;
 
-import static com.mongodb.util.JSON.parse;
+import static io.leishvl.core.data.mongodb.MapKeyConverters.escapeMongo;
+import static io.leishvl.core.data.mongodb.MapKeyConverters.unescapeMongo;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
-import static java.util.regex.Matcher.quoteReplacement;
-import static java.util.regex.Pattern.compile;
-import static java.util.regex.Pattern.quote;
-import static org.apache.commons.lang3.StringEscapeUtils.unescapeJava;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.lang.reflect.Type;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.openprovenance.prov.interop.InteropFramework;
 import org.openprovenance.prov.interop.InteropFramework.ProvFormat;
@@ -44,8 +38,6 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
 import org.springframework.data.convert.WritingConverter;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.mongodb.DBObject;
 
 /**
@@ -53,12 +45,6 @@ import com.mongodb.DBObject;
  * @author Erik Torres <ertorser@upv.es>
  */
 public class ProvConverters {
-
-	private static final Pattern DOLLAR_PATTERN = compile(quote("$"));
-	private static final String DOLLAR_REPLACEMENT = quoteReplacement("\\") + "uff04";
-
-	private static final Pattern UDOLLAR_PATTERN = compile(quote("\uff04"));
-	private static final String UDOLLAR_REPLACEMENT = quoteReplacement("$");
 
 	public static List<Converter<?, ?>> getProvConvertersToRegister() {
 		return asList(DBObjectToProvDocumentConverter.INSTANCE,
@@ -73,29 +59,26 @@ public class ProvConverters {
 			try (final ByteArrayOutputStream os = new ByteArrayOutputStream()) {
 				// export W3C PROV document to JSON using the interoperability framework
 				new InteropFramework().writeDocument(os, ProvFormat.JSON, source);
-				// escape MongoDB special characters
-				final String json = unescapeJava(DOLLAR_PATTERN.matcher(os.toString(UTF_8.name())).replaceAll(DOLLAR_REPLACEMENT));
-				// read "raw" object with MongoDB's JSON parser and return the created object
-				return (DBObject) parse(json);
+				// escape MongoDB's unsupported characters 
+				return escapeMongo(os.toString(UTF_8.name()));
 			} catch (Exception e) {
 				throw new IllegalStateException("Failed to convert W3C PROV Document to MongoDB DBObject", e);
 			}
 		}
 	}
 
+	/**
+	 * Un-escape MongoDB's unsupported characters and create a W3C PROV document using the interoperability 
+	 * framework.
+	 * @author Erik Torres <ertorser@upv.es>
+	 */
 	@ReadingConverter
 	public static enum DBObjectToProvDocumentConverter implements Converter<DBObject, Document> {
 		INSTANCE;
 		@Override
-		public Document convert(final DBObject source) {
-			// read "raw" object into a Java map
-			final Map<?, ?> map = source.toMap();
-			// write map to JSON using Gson
-			final Type typeOfMap = new TypeToken<Map<String, Object>>(){}.getType();
-			final String json = new Gson().toJson(map, typeOfMap);
-			// unescape MongoDB special characters and create a W3C PROV document using the interoperability framework
-			final String unescaped = UDOLLAR_PATTERN.matcher(json).replaceAll(UDOLLAR_REPLACEMENT);
-			return new InteropFramework().readDocument(new ByteArrayInputStream(unescaped.getBytes()), ProvFormat.JSON, null);			
+		public Document convert(final DBObject source) {			
+			return new InteropFramework().readDocument(new ByteArrayInputStream(unescapeMongo(source).getBytes()), 
+					ProvFormat.JSON, null);			
 		}
 	}
 

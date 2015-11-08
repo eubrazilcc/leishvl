@@ -92,7 +92,8 @@ public class MongoConfiguration extends AbstractMongoConfiguration {
 		final DbRefResolver dbRefResolver = new DefaultDbRefResolver(mongoDbFactory());
 		final MappingMongoConverter converter = new MappingMongoConverter(dbRefResolver, mongoMappingContext());
 		converter.setCustomConversions(customConversions());
-		converter.setMapKeyDotReplacement("\\+");
+		/* converter.setMapKeyDotReplacement("\\+"); is not needed since the custom conversions perform 
+		 * this tasks in the required fields, avoiding unnecessary operations */
 		return converter;
 	}
 

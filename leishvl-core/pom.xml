@@ -67,6 +67,16 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<dependency> 
 			<groupId>org.openprovenance.prov</groupId>
 			<artifactId>prov-interop</artifactId>
+			<exclusions> <!-- Get rid of undesired features, reducing the number of dependencies included -->
+				<exclusion>
+					<groupId>org.openprovenance.prov</groupId>
+					<artifactId>prov-template</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.openprovenance.prov</groupId>
+					<artifactId>prov-generator</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		
 		<!-- Spring Boot -->
@@ -348,7 +358,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			</properties>
 		</profile>
 		<profile>
-			<id>light-tests</id>
+			<id>headless-tests</id>
 			<properties>
 				<testcase.groups>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests</testcase.groups>
 			</properties>

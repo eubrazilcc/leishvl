@@ -60,7 +60,7 @@ import io.leishvl.test.category.IntegrationTests;
  * Tests {@link CitationRepository} class.
  * @author Erik Torres <ertorser@upv.es>
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@RunWith(SpringJUnit4ClassRunner.class) @Category(IntegrationTests.class)
 @SpringApplicationConfiguration(classes = { IntegrationTestApplication.class })
 @TestPropertySource(locations = { "classpath:test.properties" })
 @IntegrationTest
@@ -112,7 +112,7 @@ public class CitationRepositoryTests {
 
 	private @Autowired CitationRepository repository;
 
-	@Test @Category(IntegrationTests.class)
+	@Test
 	public void readsFirstPageCorrectly() {
 		repository.deleteAll();
 

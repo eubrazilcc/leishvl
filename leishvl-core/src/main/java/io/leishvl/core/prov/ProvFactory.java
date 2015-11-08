@@ -59,6 +59,8 @@ import com.google.common.collect.Lists;
 
 import io.leishvl.core.Citation;
 import io.leishvl.core.security.User;
+import io.leishvl.core.xml.GbSeqXmlBinder;
+import io.leishvl.core.xml.PubMedXmlBinder;
 
 /**
  * Provides provenance factory methods.
@@ -79,9 +81,7 @@ public final class ProvFactory {
 
 		// import activity
 		final Agent importer = PROVENANCE.softwareAgent(ds2.importer);
-		bundle.getStatement().addAll(asList(importer,
-				PROVENANCE.factory().newActedOnBehalfOf(null, importer.getId(), system.getId())
-				));
+		bundle.getStatement().addAll(asList(importer, PROVENANCE.factory().newActedOnBehalfOf(null, importer.getId(), system.getId())));
 
 		final Activity assignAct = PROVENANCE.factory().newActivity(PROVENANCE.qn("assign"));
 		final WasAssociatedWith assignAssoc = PROVENANCE.factory().newWasAssociatedWith(null, assignAct.getId(), system.getId());
@@ -382,8 +382,7 @@ public final class ProvFactory {
 		final Agent system = PROVENANCE.lvlAgent();
 		final Entity provBundle = PROVENANCE.entity(LVL_PREFIX, provId, PROVENANCE.bundleType());		
 		bundle.getStatement().addAll(asList(system, provBundle,
-				PROVENANCE.factory().newWasAttributedTo(PROVENANCE.qn("attr"), provBundle.getId(), system.getId())
-				));
+				PROVENANCE.factory().newWasAttributedTo(PROVENANCE.qn("attr"), provBundle.getId(), system.getId())));
 
 		graph.getStatementOrBundle().add(bundle);
 		graph.setNamespace(PROVENANCE.ns());
@@ -469,8 +468,6 @@ public final class ProvFactory {
 
 	public static class EntrezHelper { } // TODO
 	public static class HttpClientProvider { } // TODO
-	public static class GbSeqXmlBinder { } // TODO
-	public static class PubMedXmlBinder { } // TODO
 	public static class GeocodingHelper { } // TODO
 
 }
