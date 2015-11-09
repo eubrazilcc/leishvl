@@ -34,6 +34,8 @@ import io.leishvl.core.Citation;
  */
 public interface CitationRepository extends MongoRepository<Citation, String> {
 
-	Page<Citation> findByNamespace(String namespace, Pageable pageable);
-
+	Page<Citation> findByNamespaceValue(String namespace, Pageable pageable);
+	
+	Citation findByLeishvlId(String leishvlId);
+	
 }

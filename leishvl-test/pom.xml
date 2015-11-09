@@ -34,5 +34,26 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	<name>leishvl-test</name>
 	<description>Provides testing utilities to simplify common tasks.</description>
 	<url>http://eubrazilcc.github.io/leishvl/</url>
+	
+	<dependencies>
+		<!-- JSR-305: Annotations for Software Defect Detection -->
+		<dependency>
+			<groupId>com.google.code.findbugs</groupId>
+			<artifactId>jsr305</artifactId>
+		</dependency>
 		
+		<!-- Google Gson library -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+		</dependency>		
+		
+		<!-- JUnit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+	
 </project>

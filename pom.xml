@@ -115,11 +115,11 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			</dependency>
 			
 			<!-- Google Guava core libraries for Java -->
-			<dependency> <!-- JSR305 Annotations from Findbugs -->
+			<dependency> <!-- JSR-305: Annotations for Software Defect Detection -->
 				<groupId>com.google.code.findbugs</groupId>
 				<artifactId>jsr305</artifactId>
 				<version>3.0.0</version>
-			</dependency>			
+			</dependency>
 			
 			<!-- Open Provenance Model (OPM): an implementation of the W3C PROV standard. The 
 				interoperability framework for PROV provides utility methods to write/read 

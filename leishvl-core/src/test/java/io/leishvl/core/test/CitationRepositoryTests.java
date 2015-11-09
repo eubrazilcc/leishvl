@@ -32,18 +32,22 @@ import static io.leishvl.core.xml.PubMedXmlBinder.PUBMED_XML_FACTORY;
 
 import java.util.List;
 
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.IntegrationTest;
 import org.springframework.boot.test.SpringApplicationConfiguration;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.geo.GeoJsonPolygon;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +59,7 @@ import io.leishvl.core.data.CitationRepository;
 import io.leishvl.core.jackson.JsonProcessor;
 import io.leishvl.core.ncbi.pubmed.PubmedArticle;
 import io.leishvl.test.category.IntegrationTests;
+import io.leishvl.test.rules.TestPrinter;
 
 /**
  * Tests {@link CitationRepository} class.
@@ -66,10 +71,11 @@ import io.leishvl.test.category.IntegrationTests;
 @IntegrationTest
 public class CitationRepositoryTests {
 
-	public static final String BASE_ID = "CITATION_";
+	@Rule
+	public TestPrinter pw = new TestPrinter(true); // TODO
 
 	@Autowired
-	private JsonProcessor jsonProcessor;
+	private JsonProcessor jsonProc;
 
 	// create geographic objects
 	private final GeoJsonPoint bcnPoint = new GeoJsonPoint(2.1734034999999494d, 41.3850639d);
@@ -95,17 +101,19 @@ public class CitationRepositoryTests {
 	private final String pmid1 = article1.getMedlineCitation().getPMID().getvalue();
 
 	private final Citation citation0 = Citation.builder()
-			.leishvlId(BASE_ID + 0)
+			.namespace("citations")
+			.leishvlId("lvl-ci-pm-CIT_" + 0)
 			.leishvl(LeishvlArticle.builder().cited(newArrayList("SEQ_0", "SEQ_1")).build())
 			.pubmed(article0)
 			.location(bcnPoint)
 			.state(DRAFT)
-			.provenance(newObjectImportProv(newPubMedArticle("PMID-" + pmid0), "lvl-ci-ur-" + BASE_ID + 0, newGeocoding(bcnPoint)))
+			.provenance(newObjectImportProv(newPubMedArticle("PMID-" + pmid0), "lvl-ci-pm-" + 0, newGeocoding(bcnPoint)))
 			.references(Maps.<String, List<String>>newHashMap(ImmutableMap.of("sequences", newArrayList("lvl-sf-gb-SEQ_0", "lvl-le-gb-SEQ_1"))))
 			.build();
 
 	private final Citation citation1 = Citation.builder()
-			.leishvlId(BASE_ID + 1)
+			.namespace("citations")
+			.leishvlId("lvl-ci-pm-CIT_" + 1)
 			.pubmed(article1)
 			.location(madPoint)
 			.build();
@@ -117,31 +125,26 @@ public class CitationRepositoryTests {
 		repository.deleteAll();
 
 		// save a couple of citations
-		ImmutableList.of(citation0, citation1).stream().forEach(citation -> {
-			repository.save(citation);
-		});		
+		ImmutableList.of(citation0, citation1).stream().forEach(citation -> repository.save(citation));		
 
-		// fetch all customers
-		System.out.println("Citations found with findAll():");
-		System.out.println("-------------------------------");
-		repository.findAll().stream().forEach(citation -> {
-			System.out.println(jsonProcessor.toJson(citation, JSON_PRETTY_PRINTER));
-		});
-		System.out.println();
+		// fetch all citations
+		pw.println("Citations found with findAll():");
+		pw.println("-------------------------------");
+		repository.findAll().stream().forEach(System.out::println);
+		pw.println();
 
-		// fetch an individual customer
-		System.out.println("Customer found with findByNamespace('Alice'):");
-		System.out.println("--------------------------------");
-		System.out.println(repository.findByNamespace("Alice", new PageRequest(0, 20, Sort.Direction.ASC, "pubmed.medlineCitation.pmid.value")));
+		// fetch a citations within a given namespace
+		pw.println("Citation found with findByNamespace('citations'):");
+		pw.println("--------------------------------");
+		final Page<Citation> citations = repository.findByNamespaceValue("citations", new PageRequest(0, 20, Sort.Direction.ASC, "pubmed.medlineCitation.pmid.value"));
+		assertThat("first page", citations.isFirst(), equalTo(true));
+		pw.println("Total elements=" + citations.getTotalElements() + ", Total pages=" + citations.getTotalPages());
+		citations.forEach(System.out::println);		
 
-		System.out.println("Customers found with findByLastName('Smith'):");
-		System.out.println("--------------------------------");
-		/* TODO for (final Citation citation : repository.findByLastName("Smith")) {
-			System.out.println(citation);
-		} */
-
-		// Page<Person> persons = repository.findAll(new PageRequest(0, 10));
-		// assertThat(persons.isFirstPage(), is(true));
+		// fetch an individual citation
+		pw.println("Citation found with findByLeishvlId('lvl-ci-pm-CIT_0'):");
+		pw.println("--------------------------------");
+		pw.println(repository.findByLeishvlId("lvl-ci-pm-CIT_0"));
 	}
 
 }

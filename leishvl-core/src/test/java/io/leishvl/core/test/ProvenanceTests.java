@@ -35,27 +35,23 @@ import static io.leishvl.core.prov.ProvFactory.newPubMedArticle;
 import static io.leishvl.core.prov.ProvFactory.newReleaseProv;
 import static io.leishvl.core.prov.ProvWriter.provToFile;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.commons.io.FileUtils.deleteQuietly;
-import static org.apache.commons.io.FileUtils.getTempDirectoryPath;
 import static org.apache.commons.io.FileUtils.readFileToString;
-import static org.apache.commons.io.FilenameUtils.concat;
-import static org.apache.commons.lang3.RandomStringUtils.random;
 import static org.apache.commons.lang3.StringUtils.trim;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
 import org.openprovenance.prov.model.Document;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +59,8 @@ import com.mongodb.DBObject;
 
 import io.leishvl.core.security.User;
 import io.leishvl.test.category.FunctionalGroupTests;
+import io.leishvl.test.rules.TestPrinter;
+import io.leishvl.test.rules.TestWatcher2;
 
 /**
  * Tests common operations with W3C PROV specification.
@@ -71,200 +69,183 @@ import io.leishvl.test.category.FunctionalGroupTests;
 @Category(FunctionalGroupTests.class)
 public class ProvenanceTests {
 
-	private static final File TEST_OUTPUT_DIR = new File(concat(getTempDirectoryPath(), 
-			ProvenanceTests.class.getSimpleName() + random(8, true, true)));
+	@Rule
+	public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-	@BeforeClass
-	public static void setUp() {
-		deleteQuietly(TEST_OUTPUT_DIR);
-		TEST_OUTPUT_DIR.mkdirs();
-	}
+	@Rule
+	public TestPrinter pw = new TestPrinter();
 
-	@AfterClass
-	public static void cleanUp() {
-		deleteQuietly(TEST_OUTPUT_DIR);		
+	@Rule
+	public TestRule watchman = new TestWatcher2(pw);
+
+	@Test
+	public void testStandardFormatting() throws Exception {
+		final File testOutputDir = tmpFolder.newFolder("testStandardFormatting");
+
+		// create test dataset
+		final User user1 = User.builder().userid("user1").build();
+		final User user2 = User.builder().userid("user2").build();
+		final List<Document> history = newArrayList();
+
+		// citation imported from external data source (no coordinates provided)
+		String testId = "prov-citation-pm-draft1";			
+		Document prov = newObjectImportProv(newPubMedArticle("PMID-26148331"), "lvl-ci-pm-26148331", null);
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		File file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		history.add(prov);
+
+		// draft modification
+		testId = "prov-citation-pm-draft2";
+		addEditProv(prov, user1, "lvl-ci-pm-26148331");
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+
+		testId = "prov-citation-pm-draft3";
+		addEditProv(prov, user2, "lvl-ci-pm-26148331");
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));			
+
+		// new release
+		testId = "prov-citation-pm-rel1";
+		prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "", "-rel1");
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		history.add(prov);
+
+		testId = "prov-citation-pm-rel2";
+		prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "-rel1", "-rel2");
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		history.add(prov);			
+
+		// record invalidation
+		testId = "prov-citation-pm-inv";
+		prov = newObsoleteProv(user1, "lvl-ci-pm-26148331");
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		history.add(prov);			
+
+		// combined record provenance
+		testId = "prov-citation-pm-combined";
+		prov = combineProv(history.toArray(new Document[history.size()]));
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+
+		// user created citation
+		testId = "prov-citation-ur";
+		prov = newCustomObjectProv(user1, "lvl-ci-ur-MY_CIT");
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		file = new File(testOutputDir, testId + ".json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		file = new File(testOutputDir, testId + ".svg");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov SVG file exists", file.exists(), equalTo(true));
+		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));		
 	}
 
 	@Test
-	public void testStandardFormatting() {
-		System.out.println("ProvenanceTests.testStandardFormatting()");
-		try {
-			// create test dataset
-			final User user1 = User.builder().userid("user1").build();
-			final User user2 = User.builder().userid("user2").build();
-			final List<Document> history = newArrayList();
+	public void testMongoDBMapping() throws Exception {
+		final File testOutputDir = tmpFolder.newFolder("testMongoDBMapping");
 
-			// citation imported from external data source (no coordinates provided)
-			String testId = "prov-citation-pm-draft1";			
-			Document prov = newObjectImportProv(newPubMedArticle("PMID-26148331"), "lvl-ci-pm-26148331", null);
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-			File file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-			history.add(prov);
+		// test with plain JSON string
+		final String json1 = "{ \"$a1$\": \"va1\", \"_a2$\": \"va2\", \"$a3$\": { \"$b1_\": \"vb1\", \"_b2$\": \"vb2\", \"$b3_\": { \"$c1$\": \"vc1\", \"_c2_\": \"vc2\" } }, "
+				+ "\"_a4_\": \"va4\", \"$a5_\": \"va5\", \".a6$\": \"va6\", \"$a7.\": { \".b1.\": { \"_c1.\": \"vc1\" } }, \"...\": \"va8\" }";					
+		DBObject obj = escapeMongo(json1);
+		assertThat("not null DB object is created", obj, notNullValue());
+		String json2 = unescapeMongo(obj);
+		assertThat("not empty JSON string is created", trim(json2), allOf(notNullValue(), not(equalTo(""))));
+		final ObjectMapper om = new ObjectMapper();
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> map1 = (Map<String, Object>)(om.readValue(json1, Map.class));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> map2 = (Map<String, Object>)(om.readValue(json2, Map.class));
+		assertThat("not null map is created from original JSON", map1, notNullValue());
+		assertThat("not null map is created from parsed JSON", map2, notNullValue());
+		assertThat("JSON strings coincide", map1.equals(map2), equalTo(true));
+		// additional output
+		pw.println("\n >> -- Original JSON : " + json1);
+		pw.println("\n >> Mapped DB Object : " + obj.toMap());
+		pw.println("\n >> ---- Parsed JSON : " + json2);
 
-			// draft modification
-			testId = "prov-citation-pm-draft2";
-			addEditProv(prov, user1, "lvl-ci-pm-26148331");
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		// test with provenance document
+		final Document prov = newObjectImportProv(newGenBankSequence("gb.123", "Sandflies"), "lvl.sf.gb.123", null);
+		assertThat("prov document is not null", prov, notNullValue());
+		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
 
-			testId = "prov-citation-pm-draft3";
-			addEditProv(prov, user2, "lvl-ci-pm-26148331");
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));			
+		final File file = new File(testOutputDir, "seq-gb.123.json");
+		provToFile(prov, file.getCanonicalPath());
+		assertThat("prov JSON file exists", file.exists(), equalTo(true));
+		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
 
-			// new release
-			testId = "prov-citation-pm-rel1";
-			prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "", "-rel1");
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-			history.add(prov);
-
-			testId = "prov-citation-pm-rel2";
-			prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "-rel1", "-rel2");
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-			history.add(prov);			
-
-			// record invalidation
-			testId = "prov-citation-pm-inv";
-			prov = newObsoleteProv(user1, "lvl-ci-pm-26148331");
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-			history.add(prov);			
-
-			// combined record provenance
-			testId = "prov-citation-pm-combined";
-			prov = combineProv(history.toArray(new Document[history.size()]));
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-
-			// user created citation
-			testId = "prov-citation-ur";
-			prov = newCustomObjectProv(user1, "lvl-ci-ur-MY_CIT");
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-			file = new File(TEST_OUTPUT_DIR, testId + ".json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-			file = new File(TEST_OUTPUT_DIR, testId + ".svg");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov SVG file exists", file.exists(), equalTo(true));
-			assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
-		} catch (Exception e) {
-			e.printStackTrace(System.err);
-			fail("ProvenanceTests.testStandardFormatting() failed: " + e.getMessage());
-		} finally {
-			System.out.println("ProvenanceTests.testStandardFormatting() has finished");
-		}
-	}
-
-	@Test
-	public void testMongoDBMapping() {
-		System.out.println("ProvenanceTests.testMongoDBMapping()");
-		try {
-			// test with plain JSON string
-			final String json1 = "{ \"$a1$\": \"va1\", \"_a2$\": \"va2\", \"$a3$\": { \"$b1_\": \"vb1\", \"_b2$\": \"vb2\", \"$b3_\": { \"$c1$\": \"vc1\", \"_c2_\": \"vc2\" } }, "
-					+ "\"_a4_\": \"va4\", \"$a5_\": \"va5\", \".a6$\": \"va6\", \"$a7.\": { \".b1.\": { \"_c1.\": \"vc1\" } }, \"...\": \"va8\" }";					
-			DBObject obj = escapeMongo(json1);
-			assertThat("not null DB object is created", obj, notNullValue());
-			String json2 = unescapeMongo(obj);
-			assertThat("not empty JSON string is created", trim(json2), allOf(notNullValue(), not(equalTo(""))));
-			final ObjectMapper om = new ObjectMapper();
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> map1 = (Map<String, Object>)(om.readValue(json1, Map.class));
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> map2 = (Map<String, Object>)(om.readValue(json2, Map.class));
-			assertThat("not null map is created from original JSON", map1, notNullValue());
-			assertThat("not null map is created from parsed JSON", map2, notNullValue());
-			assertThat("JSON strings coincide", map1.equals(map2), equalTo(true));
-			// uncomment for additional output
-			System.err.println("\n >> -- Original JSON : " + json1);
-			System.err.println("\n >> Mapped DB Object : " + obj.toMap());
-			System.err.println("\n >> ---- Parsed JSON : " + json2);
-
-			// test with provenance document
-			final Document prov = newObjectImportProv(newGenBankSequence("gb.123", "Sandflies"), "lvl.sf.gb.123", null);
-			assertThat("prov document is not null", prov, notNullValue());
-			assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-			assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
-
-			final File file = new File(TEST_OUTPUT_DIR, "seq-gb.123.json");
-			provToFile(prov, file.getCanonicalPath());
-			assertThat("prov JSON file exists", file.exists(), equalTo(true));
-			assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
-
-			final String provJson = readFileToString(file, UTF_8.name());
-			assertThat("not empty JSON string is created", trim(provJson), allOf(notNullValue(), not(equalTo(""))));
-			obj = escapeMongo(provJson);
-			assertThat("not null DB object is created", obj, notNullValue());
-			json2 = unescapeMongo(obj);
-			assertThat("not empty JSON string is created", trim(json2), allOf(notNullValue(), not(equalTo(""))));
-			// uncomment for additional output
-			System.err.println("\n >> -- W3C Prov JSON : " + provJson);
-			System.err.println("\n >> Mapped DB Object : " + obj.toMap());
-			System.err.println("\n >> ---- Parsed JSON : " + json2 + "\n");
-		} catch (Exception e) {
-			e.printStackTrace(System.err);
-			fail("ProvenanceTests.testMongoDBMapping() failed: " + e.getMessage());
-		} finally {
-			System.out.println("ProvenanceTests.testMongoDBMapping() has finished");
-		}
+		final String provJson = readFileToString(file, UTF_8.name());
+		assertThat("not empty JSON string is created", trim(provJson), allOf(notNullValue(), not(equalTo(""))));
+		obj = escapeMongo(provJson);
+		assertThat("not null DB object is created", obj, notNullValue());
+		json2 = unescapeMongo(obj);
+		assertThat("not empty JSON string is created", trim(json2), allOf(notNullValue(), not(equalTo(""))));
+		// additional output
+		pw.println("\n >> -- W3C Prov JSON : " + provJson);
+		pw.println("\n >> Mapped DB Object : " + obj.toMap());
+		pw.println("\n >> ---- Parsed JSON : " + json2 + "\n");		
 	}
 
 }

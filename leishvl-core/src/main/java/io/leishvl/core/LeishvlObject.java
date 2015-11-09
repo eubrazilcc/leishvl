@@ -71,8 +71,7 @@ public abstract class LeishvlObject {
 	private Optional<LeishvlObjectState> state = empty(); // (optional) state
 
 	private Date lastModified; // last modification date
-	private String isActive; // set to the GUID value in the active version (in most cases, the latest version)
-	private String isActive2; // a copy of the field with an alternative index
+	private String isActive; // set to the GUID value in the active version, otherwise contains null
 	private Map<String, List<String>> references; // references to other documents
 
 	public LeishvlObject(final Logger logger) {
@@ -153,14 +152,6 @@ public abstract class LeishvlObject {
 		this.isActive = isActive;
 	}
 
-	public String getIsActive2() {
-		return isActive2;
-	}
-
-	public void setIsActive2(final String isActive2) {
-		this.isActive2 = isActive2;
-	}
-
 	public Map<String, List<String>> getReferences() {
 		return references;
 	}
@@ -188,13 +179,12 @@ public abstract class LeishvlObject {
 				&& Objects.equals(state.orElse(null), other.state.orElse(null))
 				&& Objects.equals(lastModified, other.lastModified)
 				&& Objects.equals(isActive, other.isActive)
-				&& Objects.equals(isActive2, other.isActive2)
 				&& Objects.equals(references, other.references);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(namespace, leishvlId, version, location, provenance, state, lastModified, isActive, isActive2, references);
+		return Objects.hash(namespace, leishvlId, version, location, provenance, state, lastModified, isActive, references);
 	}
 
 	@Override
@@ -209,7 +199,6 @@ public abstract class LeishvlObject {
 				.add("state", state.orElse(DRAFT))
 				.add("lastModified", lastModified)
 				.add("isActive", isActive)
-				.add("isActive2", isActive2)
 				.add("references", references)
 				.toString();
 	}
