@@ -345,7 +345,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 								</configuration>
 							</execution>
 						</executions>
-					</plugin>
+					</plugin>					
 				</plugins>
 			</build>
 		</profile>
@@ -355,13 +355,13 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<activeByDefault>true</activeByDefault>
 			</activation>
 			<properties>
-				<testcase.groups>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests,io.leishvl.test.category.IntegrationTests</testcase.groups>
+				<testcases.group>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests,io.leishvl.test.category.IntegrationTests</testcases.group>
 			</properties>
 		</profile>
 		<profile>
 			<id>headless-tests</id>
 			<properties>
-				<testcase.groups>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests</testcase.groups>
+				<testcases.group>io.leishvl.test.category.SanityTests,io.leishvl.test.category.FunctionalGroupTests</testcases.group>
 			</properties>
 		</profile>		
 	</profiles>
@@ -400,24 +400,13 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<!-- Maven Surefire Plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<dependencies>					
-					<dependency> <!-- SureFire JUnitCore (JUnit 4.7+) Runner -->
-						<groupId>org.apache.maven.surefire</groupId>
-						<artifactId>surefire-junit47</artifactId>
-						<version>${maven-surefire-plugin.version}</version>
-					</dependency>
-				</dependencies>
-				<configuration>
-					<groups>${testcase.groups}</groups>
-					<excludes>
-						<exclude>${exclude.tests}</exclude>
-					</excludes>
-					<includes>
-						<include>${include.tests}</include>
-					</includes>
-				</configuration>				
-			</plugin>			
+				<artifactId>maven-surefire-plugin</artifactId>					
+			</plugin>
+			<!-- Maven Failsafe Plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>					
+			</plugin>
 		</plugins>
 	</build>
 	

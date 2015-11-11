@@ -93,7 +93,8 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 		<maven-jaxb2-plugin.version>0.12.3</maven-jaxb2-plugin.version>
 		<maven-jaxb2-plugin.jaxb2-commons-lang.version>2.4</maven-jaxb2-plugin.jaxb2-commons-lang.version>
 		<maven-jaxb2-plugin.jaxb2-fluent-api.version>3.0</maven-jaxb2-plugin.jaxb2-fluent-api.version>
-		<maven-surefire-plugin.version>2.19</maven-surefire-plugin.version>
+		<maven-surefire-plugin.version>2.19</maven-surefire-plugin.version> <!-- override dependency version defined in spring-boot-dependencies -->
+		<maven-failsafe-plugin.version>2.19</maven-failsafe-plugin.version> <!-- override dependency version defined in spring-boot-dependencies -->
 	</properties>
 
 	<dependencyManagement>
@@ -140,12 +141,37 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				<plugin>
 					<groupId>org.springframework.boot</groupId>
 					<artifactId>spring-boot-maven-plugin</artifactId>
+					<configuration>
+						<classifier>exec</classifier>
+					</configuration>
 				</plugin>
 				<!-- Maven Surefire Plugin -->
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
 					<version>${maven-surefire-plugin.version}</version>
+					<dependencies>					
+						<dependency> <!-- SureFire JUnitCore (JUnit 4.7+) Runner -->
+							<groupId>org.apache.maven.surefire</groupId>
+							<artifactId>surefire-junit47</artifactId>
+							<version>${maven-surefire-plugin.version}</version>
+						</dependency>
+					</dependencies>
+					<configuration>
+						<groups>${testcases.group}</groups>
+						<excludes>
+							<exclude>${exclude.tests}</exclude>
+						</excludes>
+						<includes>
+							<include>${include.tests}</include>
+						</includes>
+					</configuration>
+				</plugin>
+				<!-- Maven Failsafe Plugin -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-failsafe-plugin</artifactId>
+					<version>${maven-failsafe-plugin.version}</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>

@@ -20,7 +20,7 @@
  * that you distribute must include a readable copy of the "NOTICE" text file.
  */
 
-package io.leishvl.core.test;
+package io.leishvl.core;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -31,15 +31,15 @@ import io.leishvl.core.config.JacksonConfiguration;
 import io.leishvl.core.config.MongoConfiguration;
 
 /**
- * Spring application for use in integration tests.
+ * Spring application which is mainly intended for use in demonstrations since this is a JAR library, not an executable.
  * @author Erik Torres <ertorser@upv.es>
  */
 @SpringBootApplication
 @Import(value={ JacksonConfiguration.class, MongoConfiguration.class })
-public class IntegrationTestApplication implements CommandLineRunner {
+public class LeishvlCoreApplication implements CommandLineRunner {
 
 	public static void main(final String[] args) {
-		SpringApplication.run(IntegrationTestApplication.class, args);
+		SpringApplication.run(LeishvlCoreApplication.class, args);
 	}
 
 	@Override

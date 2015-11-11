@@ -11,3 +11,21 @@ operating with the database names.
 ## Environment variables
 
 ``LEISHVL_PRINT_TESTS_OUTPUT`` set value to ``true`` to print tests output.
+
+## Development
+
+### Run all tests logging to the console
+
+``$ mvn clean verify -pl leishvl-core -P all-tests -Dleishvl.print.tests.out=true |& tee /tmp/LOGFILE``
+
+### Run functional and sanity tests logging to the console
+
+``$ mvn clean verify -pl leishvl-core -P headless-tests -Dleishvl.print.tests.out=true |& tee /tmp/LOGFILE``
+
+## Continuous integration
+
+``$ mvn clean verify -pl leishvl-core``
+
+## Install from source
+
+``$ mvn clean install -pl leishvl-test``

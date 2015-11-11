@@ -24,11 +24,12 @@ package io.leishvl.core.test;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static io.leishvl.core.LeishvlObjectState.DRAFT;
-import static io.leishvl.core.jackson.JsonOptions.JSON_PRETTY_PRINTER;
 import static io.leishvl.core.prov.ProvFactory.newGeocoding;
 import static io.leishvl.core.prov.ProvFactory.newObjectImportProv;
 import static io.leishvl.core.prov.ProvFactory.newPubMedArticle;
 import static io.leishvl.core.xml.PubMedXmlBinder.PUBMED_XML_FACTORY;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.util.List;
 
@@ -46,8 +47,6 @@ import org.springframework.data.mongodb.core.geo.GeoJsonPoint;
 import org.springframework.data.mongodb.core.geo.GeoJsonPolygon;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +54,7 @@ import com.google.common.collect.Maps;
 
 import io.leishvl.core.Citation;
 import io.leishvl.core.LeishvlArticle;
+import io.leishvl.core.LeishvlCoreApplication;
 import io.leishvl.core.data.CitationRepository;
 import io.leishvl.core.jackson.JsonProcessor;
 import io.leishvl.core.ncbi.pubmed.PubmedArticle;
@@ -66,13 +66,13 @@ import io.leishvl.test.rules.TestPrinter;
  * @author Erik Torres <ertorser@upv.es>
  */
 @RunWith(SpringJUnit4ClassRunner.class) @Category(IntegrationTests.class)
-@SpringApplicationConfiguration(classes = { IntegrationTestApplication.class })
+@SpringApplicationConfiguration(classes = { LeishvlCoreApplication.class })
 @TestPropertySource(locations = { "classpath:test.properties" })
 @IntegrationTest
 public class CitationRepositoryTests {
 
 	@Rule
-	public TestPrinter pw = new TestPrinter(true); // TODO
+	public TestPrinter pw = new TestPrinter();
 
 	@Autowired
 	private JsonProcessor jsonProc;
@@ -130,7 +130,7 @@ public class CitationRepositoryTests {
 		// fetch all citations
 		pw.println("Citations found with findAll():");
 		pw.println("-------------------------------");
-		repository.findAll().stream().forEach(System.out::println);
+		repository.findAll().stream().forEach(pw::println);
 		pw.println();
 
 		// fetch a citations within a given namespace
@@ -139,7 +139,7 @@ public class CitationRepositoryTests {
 		final Page<Citation> citations = repository.findByNamespaceValue("citations", new PageRequest(0, 20, Sort.Direction.ASC, "pubmed.medlineCitation.pmid.value"));
 		assertThat("first page", citations.isFirst(), equalTo(true));
 		pw.println("Total elements=" + citations.getTotalElements() + ", Total pages=" + citations.getTotalPages());
-		citations.forEach(System.out::println);		
+		citations.forEach(pw::println);		
 
 		// fetch an individual citation
 		pw.println("Citation found with findByLeishvlId('lvl-ci-pm-CIT_0'):");

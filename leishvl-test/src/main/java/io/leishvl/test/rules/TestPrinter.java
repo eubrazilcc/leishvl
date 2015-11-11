@@ -43,7 +43,7 @@ public class TestPrinter extends ExternalResource {
 	 * Default constructor gets its configuration from the system environment.
 	 */
 	public TestPrinter() {
-		this(System.getProperty("LEISHVL_PRINT_TESTS_OUTPUT", "false").equals("true"));
+		this(System.getProperty("leishvl.tests.print.out", "false").equals("true"));
 	}
 
 	public TestPrinter(final boolean print) {
