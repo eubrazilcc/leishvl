@@ -1,6 +1,10 @@
 # LeishVL
 A virtual laboratory to help in leishmaniasis disease surveillance
 
+## Master Build Status
+
+<a href='https://travis-ci.org/eubrazilcc/leishvl/builds'><img src='https://api.travis-ci.org/eubrazilcc/leishvl.svg'></a>
+
 ## Considerations
 
 Database object names were designd to fit into the provenance model name-space, in order to avoid name convertion before
