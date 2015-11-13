@@ -6,6 +6,7 @@ jdk:
 sudo: required
 
 cache:
+  apt: true
   directories:
   - $HOME/.m2
   - $HOME/.embedmongo
