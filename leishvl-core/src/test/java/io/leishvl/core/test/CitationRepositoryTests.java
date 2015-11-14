@@ -139,7 +139,7 @@ public class CitationRepositoryTests {
 		final Page<Citation> citations = repository.findByNamespaceValue("citations", new PageRequest(0, 20, Sort.Direction.ASC, "pubmed.medlineCitation.pmid.value"));
 		assertThat("first page", citations.isFirst(), equalTo(true));
 		pw.println("Total elements=" + citations.getTotalElements() + ", Total pages=" + citations.getTotalPages());
-		citations.forEach(pw::println);		
+		citations.forEach(pw::println);
 
 		// fetch an individual citation
 		pw.println("Citation found with findByLeishvlId('lvl-ci-pm-CIT_0'):");

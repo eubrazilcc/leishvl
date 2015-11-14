@@ -26,9 +26,10 @@ import static io.leishvl.test.util.ResourceLoadingUtils.getResourceFiles;
 import static java.io.File.separator;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
 
 import java.util.List;
 
@@ -56,8 +57,7 @@ public class ResourceLoadingTests {
 	public void testSimpleDirectoryHierarchy() {
 		// test simple directory hierarchy
 		final List<String> files = getResourceFiles("examples", new String[]{ ".txt", ".log" });
-		assertThat("files list is not null", files, notNullValue());
-		assertThat("number of files coincide with expected", files.size(), equalTo(3));
+		assertThat("list of files coincides with expected", files, allOf(notNullValue(), hasSize(3)));		
 		final String filenames = files.stream().map(s -> s + "\n").reduce("", String::concat);
 		assertThat("all expected files are included", filenames, allOf(containsString("example1.txt"),
 				containsString("example2.txt"), containsString("example4.log")));
@@ -69,8 +69,7 @@ public class ResourceLoadingTests {
 		// test complex directory hierarchy
 		final List<String> files = getResourceFiles(new StringBuffer("examples").append(separator)
 				.append("inner_examples").toString(), new String[]{ ".txt" });
-		assertThat("files list is not null", files, notNullValue());
-		assertThat("number of files coincide with expected", files.size(), equalTo(1));
+		assertThat("list of files coincides with expected", files, allOf(notNullValue(), hasSize(1)));
 		final String filenames = files.stream().map(s -> s + "\n").reduce("", String::concat);
 		assertThat("all expected files are included", filenames, containsString("example.txt"));
 		pw.println("\n >> Files: " + files);
@@ -80,16 +79,14 @@ public class ResourceLoadingTests {
 	public void testInvalidDirectory() {
 		// test empty directory
 		final List<String> files = getResourceFiles("i_dont_exist", new String[]{ ".txt" });
-		assertThat("files list is not null", files, notNullValue());
-		assertThat("number of files coincide with expected", files.size(), equalTo(0));
+		assertThat("list of files coincides with expected", files, allOf(notNullValue(), empty()));		
 	}
 
 	@Test
 	public void testEmptyExtensionList() {
 		// test empty extension list
 		final List<String> files = getResourceFiles("examples", null);
-		assertThat("files list is not null", files, notNullValue());
-		assertThat("number of files coincide with expected", files.size(), equalTo(0));		
+		assertThat("list of files coincides with expected", files, allOf(notNullValue(), empty()));		
 	}
 
 }

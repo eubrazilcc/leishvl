@@ -42,6 +42,8 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsEmptyCollection.empty;
+import static org.hamcrest.number.OrderingComparison.greaterThan;
 
 import java.io.File;
 import java.util.List;
@@ -91,16 +93,15 @@ public class ProvenanceTests {
 		String testId = "prov-citation-pm-draft1";			
 		Document prov = newObjectImportProv(newPubMedArticle("PMID-26148331"), "lvl-ci-pm-26148331", null);
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 		File file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 		history.add(prov);
 
 		// draft modification
@@ -109,68 +110,65 @@ public class ProvenanceTests {
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 
 		testId = "prov-citation-pm-draft3";
 		addEditProv(prov, user2, "lvl-ci-pm-26148331");
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));			
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));			
 
 		// new release
 		testId = "prov-citation-pm-rel1";
 		prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "", "-rel1");
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 		history.add(prov);
 
 		testId = "prov-citation-pm-rel2";
 		prov = newReleaseProv(user1, "lvl-ci-pm-26148331", "-rel1", "-rel2");
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 		history.add(prov);			
 
 		// record invalidation
 		testId = "prov-citation-pm-inv";
 		prov = newObsoleteProv(user1, "lvl-ci-pm-26148331");
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 		history.add(prov);			
 
 		// combined record provenance
@@ -179,26 +177,25 @@ public class ProvenanceTests {
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));
 
 		// user created citation
 		testId = "prov-citation-ur";
 		prov = newCustomObjectProv(user1, "lvl-ci-ur-MY_CIT");
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 		file = new File(testOutputDir, testId + ".json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 		file = new File(testOutputDir, testId + ".svg");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov SVG file exists", file.exists(), equalTo(true));
-		assertThat("prov SVG file is not empty", file.length() > 0l, equalTo(true));		
+		assertThat("prov SVG file is not empty", file.length(), greaterThan(0l));		
 	}
 
 	@Test
@@ -228,13 +225,12 @@ public class ProvenanceTests {
 		// test with provenance document
 		final Document prov = newObjectImportProv(newGenBankSequence("gb.123", "Sandflies"), "lvl.sf.gb.123", null);
 		assertThat("prov document is not null", prov, notNullValue());
-		assertThat("prov bundle is not null", prov.getStatementOrBundle(), notNullValue());
-		assertThat("prov bundle is not empty", prov.getStatementOrBundle().isEmpty(), equalTo(false));
+		assertThat("prov bundle is not empty", prov.getStatementOrBundle(), allOf(notNullValue(), not(empty())));
 
 		final File file = new File(testOutputDir, "seq-gb.123.json");
 		provToFile(prov, file.getCanonicalPath());
 		assertThat("prov JSON file exists", file.exists(), equalTo(true));
-		assertThat("prov JSON file is not empty", file.length() > 0l, equalTo(true));
+		assertThat("prov JSON file is not empty", file.length(), greaterThan(0l));
 
 		final String provJson = readFileToString(file, UTF_8.name());
 		assertThat("not empty JSON string is created", trim(provJson), allOf(notNullValue(), not(equalTo(""))));

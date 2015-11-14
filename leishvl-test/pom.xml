@@ -54,6 +54,13 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<artifactId>junit</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		
+		<!--Extends the Hamcrest core matcher that is transitively included with JUnit -->
+		<dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-library</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	
 </project>
