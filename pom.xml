@@ -173,9 +173,26 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 					<artifactId>maven-failsafe-plugin</artifactId>
 					<version>${maven-failsafe-plugin.version}</version>
 				</plugin>
+				<!-- Cobertura: creates code coverage reports -->
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>cobertura-maven-plugin</artifactId>
+					<version>2.7</version>
+					<configuration>
+						<format>xml</format>
+						<maxmem>256m</maxmem>
+						<aggregate>true</aggregate>
+						<quiet>true</quiet>
+					</configuration>
+				</plugin>
 			</plugins>
 		</pluginManagement>
-		<plugins>			
+		<plugins>
+			<!-- Cobertura: creates code coverage reports -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+			</plugin>
 			<!-- Submit code coverage reports to Coveralls web service -->
 			<plugin>
 				<groupId>org.eluder.coveralls</groupId>
@@ -190,17 +207,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 	
 	<reporting>
 		<plugins>
-			<!-- Cobertura: creates code coverage reports -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>cobertura-maven-plugin</artifactId>
-				<version>2.7</version>
-				<configuration>
-					<format>xml</format>
-					<maxmem>256m</maxmem>
-					<aggregate>true</aggregate>
-				</configuration>
-			</plugin>
+			
 		</plugins>
 	</reporting>
 	
