@@ -175,34 +175,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 				</plugin>
 			</plugins>
 		</pluginManagement>
-		<plugins>
-			<!-- JaCoCo: creates code coverage reports -->
-			<plugin>
-				<groupId>org.jacoco</groupId>
-				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.7.5.201505241946</version>
-				<executions>
-					<execution>
-						<id>default-prepare-agent</id>
-						<goals>
-							<goal>prepare-agent</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>default-report</id>
-						<phase>prepare-package</phase>
-						<goals>
-							<goal>report</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>default-check</id>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+		<plugins>			
 			<!-- Submit code coverage reports to Coveralls web service -->
 			<plugin>
 				<groupId>org.eluder.coveralls</groupId>
@@ -214,6 +187,22 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			</plugin>
 		</plugins>
 	</build>
+	
+	<reporting>
+		<plugins>
+			<!-- Cobertura: creates code coverage reports -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<format>xml</format>
+					<maxmem>256m</maxmem>
+					<aggregate>true</aggregate>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
 	
 	<repositories>
 		<repository>
