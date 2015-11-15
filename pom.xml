@@ -183,6 +183,18 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 						<maxmem>256m</maxmem>
 						<aggregate>true</aggregate>
 						<quiet>true</quiet>
+						<instrumentation>
+							<ignores>
+								<ignore>io.leishvl.core.dwc.*</ignore>
+								<ignore>io.leishvl.core.ncbi.*</ignore>
+								<ignore>io.leishvl.core.tapir.*</ignore>
+							</ignores>
+							<excludes>
+								<exclude>io/leishvl/core/dwc/**/*.class</exclude>
+								<exclude>io/leishvl/core/ncbi/**/*.class</exclude>
+								<exclude>io/leishvl/core/tapir/**/*.class</exclude>
+							</excludes>
+						</instrumentation>
 					</configuration>
 				</plugin>
 			</plugins>
@@ -191,7 +203,7 @@ that you distribute must include a readable copy of the "NOTICE" text file.
 			<!-- Cobertura: creates code coverage reports -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>cobertura-maven-plugin</artifactId>
+				<artifactId>cobertura-maven-plugin</artifactId>				
 			</plugin>
 			<!-- Submit code coverage reports to Coveralls web service -->
 			<plugin>
