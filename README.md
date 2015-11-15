@@ -4,7 +4,6 @@ A virtual laboratory to help in leishmaniasis disease surveillance
 ## Master Build Status
 
 [![Build Status](https://api.travis-ci.org/eubrazilcc/leishvl.svg)](https://travis-ci.org/eubrazilcc/leishvl/builds)
-
 [![Coverage Status](https://coveralls.io/repos/eubrazilcc/leishvl/badge.svg?branch=master&service=github)](https://coveralls.io/github/eubrazilcc/leishvl?branch=master)
 
 ## Considerations
